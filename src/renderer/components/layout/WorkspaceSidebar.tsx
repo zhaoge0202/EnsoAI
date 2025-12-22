@@ -49,15 +49,9 @@ export function WorkspaceSidebar({
     if (workspace) onSelectWorkspace(workspace);
   };
 
-  // Collapsed state - render nothing, handled by WorktreePanel
-  if (collapsed) {
-    return null;
-  }
-
   return (
     <aside
-      className="flex flex-col border-r bg-muted/30 shrink-0"
-      style={{ width: `${width}px` }}
+      className="flex h-full w-full flex-col border-r bg-muted/30"
     >
       {/* Top bar with collapse button - h-12 to align with WorktreePanel header */}
       <div className="flex h-12 shrink-0 items-center justify-end px-2 drag-region">

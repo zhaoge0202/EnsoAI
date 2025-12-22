@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { WorkspaceSidebar } from './components/layout/WorkspaceSidebar';
 import { WorktreePanel } from './components/layout/WorktreePanel';
 import { MainContent } from './components/layout/MainContent';
 import { useWorkspaceStore } from './stores/workspace';
 import { useWorktreeList, useWorktreeCreate, useWorktreeRemove } from './hooks/useWorktree';
 import { useGitBranches } from './hooks/useGit';
-import { PanelLeftClose, PanelLeft } from 'lucide-react';
 import type { GitWorktree, WorkspaceRecord, WorktreeCreateOptions } from '@shared/types';
+
+// Animation config
+const panelTransition = { type: 'spring', stiffness: 400, damping: 30 };
 
 type TabId = 'chat' | 'file' | 'terminal' | 'source-control';
 
@@ -274,56 +277,96 @@ export default function App() {
   return (
     <div className={`flex h-screen overflow-hidden ${resizing ? 'select-none' : ''}`}>
       {/* Column 1: Workspace Sidebar */}
-      <WorkspaceSidebar
-        workspaces={workspaces}
-        currentWorkspace={currentWorkspace}
-        repositories={repositories}
-        selectedRepo={selectedRepo}
-        onSelectWorkspace={handleSelectWorkspace}
-        onSelectRepo={handleSelectRepo}
-        onAddRepository={handleAddRepository}
-        width={workspaceWidth}
-        collapsed={workspaceCollapsed}
-        onCollapse={() => setWorkspaceCollapsed(!workspaceCollapsed)}
-      />
+      <AnimatePresence initial={false}>
+        {!workspaceCollapsed && (
+          <motion.div
+            key="workspace"
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: workspaceWidth, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={panelTransition}
+            className="h-full shrink-0 overflow-hidden"
+          >
+            <WorkspaceSidebar
+              workspaces={workspaces}
+              currentWorkspace={currentWorkspace}
+              repositories={repositories}
+              selectedRepo={selectedRepo}
+              onSelectWorkspace={handleSelectWorkspace}
+              onSelectRepo={handleSelectRepo}
+              onAddRepository={handleAddRepository}
+              width={workspaceWidth}
+              collapsed={false}
+              onCollapse={() => setWorkspaceCollapsed(true)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Resize handle for workspace */}
-      {!workspaceCollapsed && (
-        <div
-          className="w-1 cursor-col-resize bg-transparent hover:bg-primary/20 active:bg-primary/30 transition-colors shrink-0"
-          onMouseDown={handleResizeStart('workspace')}
-        />
-      )}
+      <AnimatePresence initial={false}>
+        {!workspaceCollapsed && (
+          <motion.div
+            key="workspace-resize"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="w-1 cursor-col-resize bg-transparent hover:bg-primary/20 active:bg-primary/30 transition-colors shrink-0"
+            onMouseDown={handleResizeStart('workspace')}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Column 2: Worktree Panel */}
-      <WorktreePanel
-        worktrees={worktrees}
-        activeWorktree={activeWorktree}
-        branches={branches}
-        projectName={selectedRepo?.split('/').pop() || ''}
-        isLoading={worktreesLoading}
-        isCreating={createWorktreeMutation.isPending}
-        onSelectWorktree={handleSelectWorktree}
-        onCreateWorktree={handleCreateWorktree}
-        onRemoveWorktree={handleRemoveWorktree}
-        onRefresh={() => {
-          refetch();
-          refetchBranches();
-        }}
-        width={worktreeWidth}
-        collapsed={worktreeCollapsed}
-        onCollapse={() => setWorktreeCollapsed(!worktreeCollapsed)}
-        workspaceCollapsed={workspaceCollapsed}
-        onExpandWorkspace={() => setWorkspaceCollapsed(false)}
-      />
+      <AnimatePresence initial={false}>
+        {!worktreeCollapsed && (
+          <motion.div
+            key="worktree"
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: worktreeWidth, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={panelTransition}
+            className="h-full shrink-0 overflow-hidden"
+          >
+            <WorktreePanel
+              worktrees={worktrees}
+              activeWorktree={activeWorktree}
+              branches={branches}
+              projectName={selectedRepo?.split('/').pop() || ''}
+              isLoading={worktreesLoading}
+              isCreating={createWorktreeMutation.isPending}
+              onSelectWorktree={handleSelectWorktree}
+              onCreateWorktree={handleCreateWorktree}
+              onRemoveWorktree={handleRemoveWorktree}
+              onRefresh={() => {
+                refetch();
+                refetchBranches();
+              }}
+              width={worktreeWidth}
+              collapsed={false}
+              onCollapse={() => setWorktreeCollapsed(true)}
+              workspaceCollapsed={workspaceCollapsed}
+              onExpandWorkspace={() => setWorkspaceCollapsed(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Resize handle for worktree */}
-      {!worktreeCollapsed && (
-        <div
-          className="w-1 cursor-col-resize bg-transparent hover:bg-primary/20 active:bg-primary/30 transition-colors shrink-0"
-          onMouseDown={handleResizeStart('worktree')}
-        />
-      )}
+      <AnimatePresence initial={false}>
+        {!worktreeCollapsed && (
+          <motion.div
+            key="worktree-resize"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="w-1 cursor-col-resize bg-transparent hover:bg-primary/20 active:bg-primary/30 transition-colors shrink-0"
+            onMouseDown={handleResizeStart('worktree')}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Column 3: Main Content */}
       <MainContent

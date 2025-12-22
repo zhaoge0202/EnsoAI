@@ -2,12 +2,13 @@ import * as React from 'react';
 import {
   Dialog,
   DialogTrigger,
-  DialogPortal,
-  DialogBackdrop,
   DialogPopup,
+  DialogHeader,
+  DialogFooter,
   DialogTitle,
   DialogDescription,
   DialogClose,
+  DialogPanel,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -118,15 +119,16 @@ export function CreateWorktreeDialog({
           )
         }
       />
-      <DialogPortal>
-        <DialogBackdrop />
-        <DialogPopup className="sm:max-w-lg">
-          <DialogTitle>新建 Worktree</DialogTitle>
-          <DialogDescription>
-            创建新分支并在独立目录中工作，可同时处理多个功能
-          </DialogDescription>
+      <DialogPopup>
+        <form onSubmit={handleSubmit} className="flex flex-col">
+          <DialogHeader>
+            <DialogTitle>新建 Worktree</DialogTitle>
+            <DialogDescription>
+              创建新分支并在独立目录中工作，可同时处理多个功能
+            </DialogDescription>
+          </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+          <DialogPanel className="space-y-4">
             {/* New Branch Name */}
             <Field>
               <FieldLabel>新分支名</FieldLabel>
@@ -191,17 +193,16 @@ export function CreateWorktreeDialog({
             {error && (
               <div className="text-sm text-destructive">{error}</div>
             )}
+          </DialogPanel>
 
-            {/* Actions */}
-            <div className="flex justify-end gap-2 pt-2">
-              <DialogClose render={<Button variant="outline">取消</Button>} />
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? '创建中...' : '创建'}
-              </Button>
-            </div>
-          </form>
-        </DialogPopup>
-      </DialogPortal>
+          <DialogFooter variant="bare">
+            <DialogClose render={<Button variant="outline">取消</Button>} />
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? '创建中...' : '创建'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogPopup>
     </Dialog>
   );
 }

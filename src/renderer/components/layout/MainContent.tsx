@@ -1,3 +1,4 @@
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -20,6 +21,12 @@ import {
   Share2,
   FolderOpen,
 } from 'lucide-react';
+
+const buttonVariants = {
+  initial: { scale: 0, opacity: 0 },
+  animate: { scale: 1, opacity: 1 },
+  exit: { scale: 0, opacity: 0 },
+};
 
 type TabId = 'chat' | 'file' | 'terminal' | 'source-control';
 
@@ -64,34 +71,62 @@ export function MainContent({
         {/* Left: Expand buttons + Tabs */}
         <div className="flex items-center gap-1 no-drag">
           {/* Expand buttons when panels are collapsed */}
-          {worktreeCollapsed && (
-            <>
-              {/* Left separator */}
-              {needsTrafficLightPadding && <div className="mx-1 h-4 w-px bg-border" />}
-              {/* Workspace expand button - shown when both panels are collapsed */}
-              {workspaceCollapsed && onExpandWorkspace && (
-                <button
-                  onClick={onExpandWorkspace}
-                  className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
-                  title="展开 Workspace"
-                >
-                  <FolderOpen className="h-4 w-4" />
-                </button>
-              )}
-              {/* Worktree expand button */}
-              {onExpandWorktree && (
-                <button
-                  onClick={onExpandWorktree}
-                  className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
-                  title="展开 Worktree"
-                >
-                  <GitBranch className="h-4 w-4" />
-                </button>
-              )}
-              {/* Right separator */}
-              <div className="mx-1 h-4 w-px bg-border" />
-            </>
-          )}
+          <AnimatePresence>
+            {worktreeCollapsed && (
+              <>
+                {/* Left separator */}
+                {needsTrafficLightPadding && (
+                  <motion.div
+                    key="left-sep"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="mx-1 h-4 w-px bg-border"
+                  />
+                )}
+                {/* Workspace expand button - shown when both panels are collapsed */}
+                {workspaceCollapsed && onExpandWorkspace && (
+                  <motion.button
+                    key="expand-workspace"
+                    variants={buttonVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                    onClick={onExpandWorkspace}
+                    className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
+                    title="展开 Workspace"
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                  </motion.button>
+                )}
+                {/* Worktree expand button */}
+                {onExpandWorktree && (
+                  <motion.button
+                    key="expand-worktree"
+                    variants={buttonVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={{ type: 'spring', stiffness: 500, damping: 25, delay: 0.05 }}
+                    onClick={onExpandWorktree}
+                    className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
+                    title="展开 Worktree"
+                  >
+                    <GitBranch className="h-4 w-4" />
+                  </motion.button>
+                )}
+                {/* Right separator */}
+                <motion.div
+                  key="right-sep"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="mx-1 h-4 w-px bg-border"
+                />
+              </>
+            )}
+          </AnimatePresence>
           {tabs.map((tab) => (
             <button
               key={tab.id}

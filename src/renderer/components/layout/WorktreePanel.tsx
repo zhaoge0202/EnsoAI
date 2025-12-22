@@ -67,15 +67,9 @@ export function WorktreePanel({
     wt.path.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Collapsed state - render nothing, expand button shown in MainContent
-  if (collapsed) {
-    return null;
-  }
-
   return (
     <aside
-      className="flex flex-col border-r bg-background shrink-0"
-      style={{ width: `${width}px` }}
+      className="flex h-full w-full flex-col border-r bg-background"
     >
       {/* Header with buttons */}
       <div className={cn(
@@ -94,6 +88,23 @@ export function WorktreePanel({
             <FolderOpen className="h-4 w-4" />
           </Button>
         )}
+        {/* Create worktree button */}
+        <CreateWorktreeDialog
+          branches={branches}
+          projectName={projectName}
+          isLoading={isCreating}
+          onSubmit={onCreateWorktree}
+          trigger={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 no-drag"
+              title="新建 Worktree"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          }
+        />
         {/* Refresh button */}
         <Button
           variant="ghost"
@@ -156,22 +167,6 @@ export function WorktreePanel({
             ))}
           </div>
         )}
-      </div>
-
-      {/* Create button */}
-      <div className="shrink-0 border-t p-2">
-        <CreateWorktreeDialog
-          branches={branches}
-          projectName={projectName}
-          isLoading={isCreating}
-          onSubmit={onCreateWorktree}
-          trigger={
-            <Button variant="outline" size="sm" className="w-full justify-start gap-2">
-              <Plus className="h-4 w-4" />
-              新建 Worktree
-            </Button>
-          }
-        />
       </div>
 
       {/* Delete confirmation dialog */}
