@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { useKeybindingInterceptor } from '@/hooks/useKeybindingInterceptor';
 import {
   defaultDarkTheme,
   getThemeNames,
@@ -67,12 +68,32 @@ interface SettingsDialogProps {
 
 export function SettingsDialog({ trigger, open, onOpenChange }: SettingsDialogProps) {
   const [activeCategory, setActiveCategory] = React.useState<SettingsCategory>('general');
+  const [internalOpen, setInternalOpen] = React.useState(false);
 
   // Controlled mode (open prop provided) doesn't need trigger
   const isControlled = open !== undefined;
+  const isOpen = isControlled ? open : internalOpen;
+
+  const handleOpenChange = React.useCallback(
+    (newOpen: boolean) => {
+      if (isControlled) {
+        onOpenChange?.(newOpen);
+      } else {
+        setInternalOpen(newOpen);
+      }
+    },
+    [isControlled, onOpenChange]
+  );
+
+  const handleClose = React.useCallback(() => {
+    handleOpenChange(false);
+  }, [handleOpenChange]);
+
+  // Intercept close tab keybinding when dialog is open
+  useKeybindingInterceptor(isOpen, 'closeTab', handleClose);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       {!isControlled && (
         <DialogTrigger
           render={
@@ -717,6 +738,7 @@ function KeybindingInput({
         onKeyDown={handleKeyDown}
         tabIndex={0}
         role="button"
+        data-keybinding-recording={isRecording ? '' : undefined}
       >
         {isRecording ? (
           <span className="flex items-center gap-2 text-muted-foreground">
