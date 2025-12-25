@@ -80,6 +80,11 @@ export const IPC_CHANNELS = {
 
   // Notification
   NOTIFICATION_SHOW: 'notification:show',
+
+  // Updater
+  UPDATER_CHECK: 'updater:check',
+  UPDATER_QUIT_AND_INSTALL: 'updater:quitAndInstall',
+  UPDATER_STATUS: 'updater:status',
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

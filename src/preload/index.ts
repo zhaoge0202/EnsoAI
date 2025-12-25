@@ -229,6 +229,43 @@ const electronAPI = {
     show: (options: { title: string; body?: string; silent?: boolean }): Promise<void> =>
       ipcRenderer.invoke(IPC_CHANNELS.NOTIFICATION_SHOW, options),
   },
+
+  // Updater
+  updater: {
+    checkForUpdates: (): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.UPDATER_CHECK),
+    quitAndInstall: (): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.UPDATER_QUIT_AND_INSTALL),
+    onStatus: (
+      callback: (status: {
+        status: 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
+        info?: unknown;
+        progress?: { percent: number; bytesPerSecond: number; total: number; transferred: number };
+        error?: string;
+      }) => void
+    ): (() => void) => {
+      const handler = (
+        _: unknown,
+        status: {
+          status:
+            | 'checking'
+            | 'available'
+            | 'not-available'
+            | 'downloading'
+            | 'downloaded'
+            | 'error';
+          info?: unknown;
+          progress?: {
+            percent: number;
+            bytesPerSecond: number;
+            total: number;
+            transferred: number;
+          };
+          error?: string;
+        }
+      ) => callback(status);
+      ipcRenderer.on(IPC_CHANNELS.UPDATER_STATUS, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.UPDATER_STATUS, handler);
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

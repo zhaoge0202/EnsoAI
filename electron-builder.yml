@@ -40,6 +40,10 @@ compression: maximum
 
 mac:
   target:
+    # ZIP for auto-update with delta support
+    - target: zip
+      arch: [arm64, x64]
+    # DMG for first-time installation
     - target: dmg
       arch: [arm64, x64]
   category: public.app-category.developer-tools
@@ -61,10 +65,9 @@ dmg:
 
 win:
   target:
+    # NSIS supports delta updates automatically
     - target: nsis
-      arch: [x64, ia32]
-    - target: portable
-      arch: [x64, ia32]
+      arch: [x64]
   icon: build/icon.ico
 
 nsis:
@@ -72,6 +75,8 @@ nsis:
   perMachine: false
   allowToChangeInstallationDirectory: true
   deleteAppDataOnUninstall: false
+  # Enable differential download for NSIS
+  differentialPackage: true
 
 linux:
   target:

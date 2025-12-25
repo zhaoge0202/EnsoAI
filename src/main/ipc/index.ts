@@ -8,6 +8,7 @@ import { registerNotificationHandlers } from './notification';
 import { registerSettingsHandlers } from './settings';
 import { registerShellHandlers } from './shell';
 import { registerTerminalHandlers } from './terminal';
+import { registerUpdaterHandlers } from './updater';
 import { registerWorktreeHandlers } from './worktree';
 
 export function registerIpcHandlers(): void {
@@ -22,4 +23,5 @@ export function registerIpcHandlers(): void {
   registerShellHandlers();
   registerSettingsHandlers();
   registerNotificationHandlers();
+  registerUpdaterHandlers();
 }

@@ -1,8 +1,9 @@
-import { electronApp, optimizer } from '@electron-toolkit/utils';
+import { electronApp, is, optimizer } from '@electron-toolkit/utils';
 import { app, BrowserWindow, Menu } from 'electron';
 import { registerIpcHandlers } from './ipc';
 import { checkGitInstalled } from './services/git/checkGit';
 import { buildAppMenu } from './services/MenuBuilder';
+import { autoUpdaterService } from './services/updater/AutoUpdater';
 import { createMainWindow } from './windows/MainWindow';
 
 let mainWindow: BrowserWindow | null = null;
@@ -30,6 +31,9 @@ app.whenReady().then(async () => {
   await init();
 
   mainWindow = createMainWindow();
+
+  // Initialize auto-updater
+  autoUpdaterService.init(mainWindow);
 
   // Build and set application menu
   const menu = buildAppMenu(mainWindow, {

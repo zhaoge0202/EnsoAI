@@ -28,3 +28,4 @@ coverage/
 # Misc
 *.pem
 thumbs.db
+dist*/

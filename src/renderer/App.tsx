@@ -6,6 +6,7 @@ import { MainContent } from './components/layout/MainContent';
 import { WorkspaceSidebar } from './components/layout/WorkspaceSidebar';
 import { WorktreePanel } from './components/layout/WorktreePanel';
 import { SettingsDialog } from './components/settings/SettingsDialog';
+import { UpdateNotification } from './components/UpdateNotification';
 import { Button } from './components/ui/button';
 import {
   Dialog,
@@ -601,6 +602,9 @@ export default function App() {
         onToggleWorktree={() => setWorktreeCollapsed((prev) => !prev)}
         onOpenSettings={() => setSettingsOpen(true)}
       />
+
+      {/* Update Notification */}
+      <UpdateNotification />
 
       {/* Close Confirmation Dialog */}
       <Dialog
