@@ -184,7 +184,15 @@ export function AgentTerminal({
   // Also detect Enter key press to mark session as activated
   const handleCustomKey = useCallback(
     (event: KeyboardEvent, ptyId: string) => {
-      // Only handle keydown events
+      // Handle Shift+Enter for newline - must be before keydown check to block both keydown and keypress
+      if (event.key === 'Enter' && event.shiftKey) {
+        if (event.type === 'keydown') {
+          window.electronAPI.terminal.write(ptyId, '\x0a');
+        }
+        return false;
+      }
+
+      // Only handle keydown events for other logic
       if (event.type !== 'keydown') return true;
 
       // Detect Enter key press (without modifiers) to activate session and start idle monitoring
@@ -219,12 +227,6 @@ export function AgentTerminal({
           pendingIdleMonitorRef.current = true;
         }
         return true; // Let Enter through normally
-      }
-
-      // Handle Shift+Enter for newline
-      if (event.key === 'Enter' && event.shiftKey) {
-        window.electronAPI.terminal.write(ptyId, '\x0a');
-        return false;
       }
 
       // User is typing - cancel idle notification and enter delay timer
