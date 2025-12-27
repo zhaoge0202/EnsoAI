@@ -10,13 +10,17 @@ import type {
   GitStatus,
 } from '@shared/types';
 import simpleGit, { type SimpleGit, type StatusResult } from 'simple-git';
+import { getEnhancedPath } from '../terminal/PtyManager';
 
 export class GitService {
   private git: SimpleGit;
   private workdir: string;
 
   constructor(workdir: string) {
-    this.git = simpleGit(workdir);
+    this.git = simpleGit(workdir).env({
+      ...process.env,
+      PATH: getEnhancedPath(),
+    });
     this.workdir = workdir;
   }
 

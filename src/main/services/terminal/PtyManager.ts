@@ -82,8 +82,18 @@ export function getEnhancedPath(): string {
     '/usr/local/bin',
     '/opt/homebrew/bin',
     '/opt/homebrew/sbin',
+    // Node.js version managers
     join(home, '.nvm', 'versions', 'node', 'current', 'bin'),
     join(home, '.npm-global', 'bin'),
+    // Package managers
+    join(home, 'Library', 'pnpm'),
+    join(home, '.local', 'share', 'pnpm'),
+    join(home, '.bun', 'bin'),
+    // Language runtimes
+    join(home, '.cargo', 'bin'),
+    // mise (polyglot runtime manager)
+    join(home, '.local', 'share', 'mise', 'shims'),
+    // General user binaries
     join(home, '.local', 'bin'),
   ];
   const allPaths = [...new Set([...additionalPaths, ...currentPath.split(delimiter)])];
