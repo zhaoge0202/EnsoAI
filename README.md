@@ -7,7 +7,6 @@
 <p align="center">
   <strong>Git Worktree 管理器 + AI 编程助手</strong>
 </p>
-111
 <p align="center">
   <a href="README.md">中文</a> | <a href="README.en.md">English</a>
 </p>

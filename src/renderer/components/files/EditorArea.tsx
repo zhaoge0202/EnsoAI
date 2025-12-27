@@ -1,7 +1,7 @@
 import Editor, { type OnMount } from '@monaco-editor/react';
 import { FileCode, Sparkles } from 'lucide-react';
 import type * as monaco from 'monaco-editor';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import {
   Breadcrumb,
@@ -26,11 +26,18 @@ import { useEditorStore } from '@/stores/editor';
 import { useSettingsStore } from '@/stores/settings';
 import { EditorTabs } from './EditorTabs';
 import { buildMonacoKeybinding } from './keyBindings';
+import { MarkdownPreview } from './MarkdownPreview';
 import { CUSTOM_THEME_NAME, defineMonacoTheme } from './monacoTheme';
 // Import for side effects (Monaco setup)
 import './monacoSetup';
 
 type Monaco = typeof monaco;
+
+function isMarkdownFile(path: string | null): boolean {
+  if (!path) return false;
+  const ext = path.split('.').pop()?.toLowerCase();
+  return ext === 'md' || ext === 'markdown';
+}
 
 interface EditorAreaProps {
   tabs: EditorTab[];
@@ -67,6 +74,14 @@ export function EditorArea({
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const { terminalTheme, editorSettings, claudeCodeIntegration } = useSettingsStore();
+
+  // Markdown preview state
+  const isMarkdown = isMarkdownFile(activeTabPath);
+  const [previewWidth, setPreviewWidth] = useState(50); // percentage
+  const resizingRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const isSyncingScrollRef = useRef(false); // Prevent scroll loop
   const setCurrentCursorLine = useEditorStore((state) => state.setCurrentCursorLine);
   const themeDefinedRef = useRef(false);
   const selectionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -382,6 +397,25 @@ export function EditorArea({
           }, claudeCodeIntegration.selectionChangedDebounce);
         });
       }
+
+      // Sync scroll from editor to preview (for markdown files)
+      editor.onDidScrollChange((e) => {
+        if (!previewRef.current || isSyncingScrollRef.current) return;
+        const scrollTop = e.scrollTop;
+        const scrollHeight = e.scrollHeight;
+        const clientHeight = editor.getLayoutInfo().height;
+        const maxScroll = scrollHeight - clientHeight;
+        if (maxScroll <= 0) return;
+
+        const scrollRatio = scrollTop / maxScroll;
+        const previewMaxScroll = previewRef.current.scrollHeight - previewRef.current.clientHeight;
+
+        isSyncingScrollRef.current = true;
+        previewRef.current.scrollTop = scrollRatio * previewMaxScroll;
+        requestAnimationFrame(() => {
+          isSyncingScrollRef.current = false;
+        });
+      });
     },
     [
       activeTab?.viewState,
@@ -496,6 +530,54 @@ export function EditorArea({
   // Determine Monaco theme - use custom theme synced with terminal
   const monacoTheme = themeDefinedRef.current ? CUSTOM_THEME_NAME : 'vs-dark';
 
+  // Handle resize divider for markdown preview
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    resizingRef.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!resizingRef.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const newPreviewWidth = ((rect.right - moveEvent.clientX) / rect.width) * 100;
+      // Clamp between 20% and 80%
+      setPreviewWidth(Math.min(80, Math.max(20, newPreviewWidth)));
+    };
+
+    const handleMouseUp = () => {
+      resizingRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  // Sync scroll from preview to editor
+  const handlePreviewScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (!editorRef.current || isSyncingScrollRef.current) return;
+    const target = e.currentTarget;
+    const scrollTop = target.scrollTop;
+    const maxScroll = target.scrollHeight - target.clientHeight;
+    if (maxScroll <= 0) return;
+
+    const scrollRatio = scrollTop / maxScroll;
+    const editor = editorRef.current;
+    const editorScrollHeight = editor.getScrollHeight();
+    const editorClientHeight = editor.getLayoutInfo().height;
+    const editorMaxScroll = editorScrollHeight - editorClientHeight;
+
+    isSyncingScrollRef.current = true;
+    editor.setScrollTop(scrollRatio * editorMaxScroll);
+    requestAnimationFrame(() => {
+      isSyncingScrollRef.current = false;
+    });
+  }, []);
+
   return (
     <div className="flex h-full flex-col">
       {/* Tabs */}
@@ -536,63 +618,97 @@ export function EditorArea({
       )}
 
       {/* Editor */}
-      <div className="relative min-w-0 flex-1">
+      <div ref={containerRef} className="relative min-h-0 min-w-0 flex-1 flex">
         {activeTab ? (
-          <Editor
-            key={activeTab.path}
-            width="100%"
-            height="100%"
-            path={activeTab.path}
-            value={activeTab.content}
-            theme={monacoTheme}
-            onChange={handleEditorChange}
-            onMount={handleEditorMount}
-            options={{
-              // Display
-              minimap: {
-                enabled: editorSettings.minimapEnabled,
-                side: 'right',
-                showSlider: 'mouseover',
-                renderCharacters: false,
-                maxColumn: 80,
-              },
-              lineNumbers: editorSettings.lineNumbers,
-              wordWrap: editorSettings.wordWrap,
-              renderWhitespace: editorSettings.renderWhitespace,
-              renderLineHighlight: editorSettings.renderLineHighlight,
-              folding: editorSettings.folding,
-              links: editorSettings.links,
-              smoothScrolling: editorSettings.smoothScrolling,
-              // Font
-              fontSize: editorSettings.fontSize,
-              fontFamily: editorSettings.fontFamily,
-              fontLigatures: true,
-              lineHeight: 20,
-              // Indentation
-              tabSize: editorSettings.tabSize,
-              insertSpaces: editorSettings.insertSpaces,
-              // Cursor
-              cursorStyle: editorSettings.cursorStyle,
-              cursorBlinking: editorSettings.cursorBlinking,
-              // Brackets
-              bracketPairColorization: { enabled: editorSettings.bracketPairColorization },
-              matchBrackets: editorSettings.matchBrackets,
-              guides: {
-                bracketPairs: editorSettings.bracketPairGuides,
-                indentation: editorSettings.indentationGuides,
-              },
-              // Editing
-              autoClosingBrackets: editorSettings.autoClosingBrackets,
-              autoClosingQuotes: editorSettings.autoClosingQuotes,
-              // Fixed options
-              padding: { top: 12, bottom: 12 },
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              fixedOverflowWidgets: true,
-            }}
-          />
+          <>
+            {/* Editor Panel */}
+            <div
+              className="relative h-full overflow-hidden"
+              style={{ width: isMarkdown ? `${100 - previewWidth}%` : '100%' }}
+            >
+              <Editor
+                key={activeTab.path}
+                width="100%"
+                height="100%"
+                path={activeTab.path}
+                value={activeTab.content}
+                theme={monacoTheme}
+                onChange={handleEditorChange}
+                onMount={handleEditorMount}
+                options={{
+                  // Display
+                  minimap: {
+                    enabled: isMarkdown ? false : editorSettings.minimapEnabled,
+                    side: 'right',
+                    showSlider: 'mouseover',
+                    renderCharacters: false,
+                    maxColumn: 80,
+                  },
+                  lineNumbers: editorSettings.lineNumbers,
+                  wordWrap: editorSettings.wordWrap,
+                  renderWhitespace: editorSettings.renderWhitespace,
+                  renderLineHighlight: editorSettings.renderLineHighlight,
+                  folding: editorSettings.folding,
+                  links: editorSettings.links,
+                  smoothScrolling: editorSettings.smoothScrolling,
+                  // Font
+                  fontSize: editorSettings.fontSize,
+                  fontFamily: editorSettings.fontFamily,
+                  fontLigatures: true,
+                  lineHeight: 20,
+                  // Indentation
+                  tabSize: editorSettings.tabSize,
+                  insertSpaces: editorSettings.insertSpaces,
+                  // Cursor
+                  cursorStyle: editorSettings.cursorStyle,
+                  cursorBlinking: editorSettings.cursorBlinking,
+                  // Brackets
+                  bracketPairColorization: { enabled: editorSettings.bracketPairColorization },
+                  matchBrackets: editorSettings.matchBrackets,
+                  guides: {
+                    bracketPairs: editorSettings.bracketPairGuides,
+                    indentation: editorSettings.indentationGuides,
+                  },
+                  // Editing
+                  autoClosingBrackets: editorSettings.autoClosingBrackets,
+                  autoClosingQuotes: editorSettings.autoClosingQuotes,
+                  // Fixed options
+                  padding: { top: 12, bottom: 12 },
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  fixedOverflowWidgets: true,
+                }}
+              />
+            </div>
+
+            {/* Resize Divider & Preview Panel (only for markdown) */}
+            {isMarkdown && (
+              <>
+                {/* Resize Divider */}
+                <div
+                  className="group relative w-1 shrink-0 cursor-col-resize bg-border hover:bg-primary/50 transition-colors"
+                  onMouseDown={handleResizeMouseDown}
+                >
+                  <div className="absolute inset-y-0 -left-1 -right-1" />
+                </div>
+
+                {/* Preview Panel */}
+                <div
+                  ref={previewRef}
+                  className="min-h-0 overflow-auto border-l bg-background"
+                  style={{ width: `${previewWidth}%` }}
+                  onScroll={handlePreviewScroll}
+                >
+                  <MarkdownPreview
+                    content={activeTab.content}
+                    basePath={activeTab.path.substring(0, activeTab.path.lastIndexOf('/'))}
+                  />
+                </div>
+              </>
+            )}
+          </>
         ) : (
-          <Empty>
+          <Empty className="flex-1">
             <EmptyMedia variant="icon">
               <FileCode className="h-4.5 w-4.5" />
             </EmptyMedia>

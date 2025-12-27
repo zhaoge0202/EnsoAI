@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { electronApp, optimizer } from '@electron-toolkit/utils';
 import { type Locale, normalizeLocale } from '@shared/i18n';
 import { IPC_CHANNELS } from '@shared/types';
-import { app, BrowserWindow, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, net, protocol } from 'electron';
 import { cleanupAllResources, registerIpcHandlers } from './ipc';
 import { registerClaudeBridgeIpcHandlers } from './services/claude/ClaudeIdeBridge';
 import { checkGitInstalled } from './services/git/checkGit';
@@ -166,6 +166,12 @@ async function init(): Promise<void> {
 app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.ensoai.app');
+
+  // Register protocol to handle local file:// URLs for markdown images
+  protocol.handle('local-file', (request) => {
+    const filePath = decodeURIComponent(request.url.slice('local-file://'.length));
+    return net.fetch(`file://${filePath}`);
+  });
 
   // Default open or close DevTools by F12 in development
   app.on('browser-window-created', (_, window) => {
