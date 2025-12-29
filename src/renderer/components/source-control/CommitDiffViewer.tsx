@@ -1,5 +1,5 @@
 import type { FileDiff } from '@shared/types';
-import { Loader2, PanelLeft } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { DiffViewer } from '@/components/source-control/DiffViewer';
 import { useI18n } from '@/i18n';
@@ -9,8 +9,6 @@ interface CommitDiffViewerProps {
   fileDiff: FileDiff | null | undefined;
   filePath: string | null;
   isLoading?: boolean;
-  filesCollapsed?: boolean;
-  onExpandFiles?: () => void;
   onPrevFile?: () => void;
   onNextFile?: () => void;
   hasPrevFile?: boolean;
@@ -22,8 +20,6 @@ export function CommitDiffViewer({
   fileDiff,
   filePath,
   isLoading = false,
-  filesCollapsed = false,
-  onExpandFiles,
   onPrevFile,
   onNextFile,
   hasPrevFile = false,
@@ -45,17 +41,6 @@ export function CommitDiffViewer({
   if (isLoading || !filePath || !fileDiff) {
     return (
       <div className="flex h-full">
-        {/* Expand button when files panel is collapsed */}
-        {filesCollapsed && onExpandFiles && (
-          <button
-            type="button"
-            onClick={onExpandFiles}
-            className="flex h-full w-6 shrink-0 items-center justify-center border-r text-muted-foreground/60 hover:bg-accent/50 hover:text-foreground transition-colors"
-            title={t('Show changed files')}
-          >
-            <PanelLeft className="h-3.5 w-3.5" />
-          </button>
-        )}
         <div className="flex flex-1 items-center justify-center">
           {isLoading ? (
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -70,17 +55,6 @@ export function CommitDiffViewer({
   // Only render DiffViewer when we have valid data
   return (
     <div className="flex h-full">
-      {/* Expand button when files panel is collapsed */}
-      {filesCollapsed && onExpandFiles && (
-        <button
-          type="button"
-          onClick={onExpandFiles}
-          className="flex h-full w-6 shrink-0 items-center justify-center border-r text-muted-foreground/60 hover:bg-accent/50 hover:text-foreground transition-colors"
-          title={t('Show changed files')}
-        >
-          <PanelLeft className="h-3.5 w-3.5" />
-        </button>
-      )}
       <div className="flex-1 overflow-hidden">
         <DiffViewer
           rootPath={rootPath}

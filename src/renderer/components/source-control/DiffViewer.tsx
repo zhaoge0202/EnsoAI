@@ -133,14 +133,25 @@ export function DiffViewer({
     original: null,
     modified: null,
   });
+  const editorFilePathRef = useRef<string | null>(null); // Track which file the current editor is displaying
   const [currentDiffIndex, setCurrentDiffIndex] = useState(-1);
   const [lineChanges, setLineChanges] = useState<ReturnType<DiffEditorInstance['getLineChanges']>>(
     []
   );
+  // Use ref to store latest lineChanges to avoid closure issues
+  const lineChangesRef = useRef<ReturnType<DiffEditorInstance['getLineChanges']>>([]);
+  // Update ref when state changes
+  useEffect(() => {
+    lineChangesRef.current = lineChanges;
+  }, [lineChanges]);
+
   const [boundaryHint, setBoundaryHint] = useState<'top' | 'bottom' | null>(null);
   const decorationsRef = useRef<string[]>([]);
   const hasAutoNavigatedRef = useRef(false);
+  const pendingNavigationDirectionRef = useRef<'next' | 'prev' | null>(null);
+  const navigationIdRef = useRef(0); // Increment on each new file selection
   const [isThemeReady, setIsThemeReady] = useState(false);
+  const diffContentRef = useRef<string>(''); // Track diff content changes
 
   // Define theme on mount and when terminal theme changes
   useEffect(() => {
@@ -150,14 +161,6 @@ export function DiffViewer({
       setIsThemeReady(true);
     }
   }, [terminalTheme, isThemeReady]);
-
-  // Reset internal state (don't dispose models - let @monaco-editor/react handle that)
-  const resetEditorState = useCallback(() => {
-    editorRef.current = null;
-    modelsRef.current.original = null;
-    modelsRef.current.modified = null;
-    decorationsRef.current = [];
-  }, []);
 
   // Highlight current diff range
   const highlightCurrentDiff = useCallback(
@@ -215,10 +218,55 @@ export function DiffViewer({
     [lineChanges]
   );
 
+  // Function to perform auto-navigation when lineChanges are available
+  // This is called from onDidUpdateDiff and from manual fetch
+  const performAutoNavigation = useCallback(
+    (editor: DiffEditorInstance, changes: ReturnType<DiffEditorInstance['getLineChanges']>) => {
+      const pendingDirection = pendingNavigationDirectionRef.current;
+
+      if (!pendingDirection || !changes || changes.length === 0 || hasAutoNavigatedRef.current) {
+        // No pending navigation, no changes, or already navigated
+        if (pendingDirection && changes !== null && changes.length === 0) {
+          // No diffs found, clear navigation
+          hasAutoNavigatedRef.current = true;
+          pendingNavigationDirectionRef.current = null;
+          setNavigationDirection(null);
+        }
+        return;
+      }
+
+      const targetIndex = pendingDirection === 'next' ? 0 : changes.length - 1;
+
+      // Mark as navigated and clear pending direction
+      hasAutoNavigatedRef.current = true;
+      pendingNavigationDirectionRef.current = null;
+      setCurrentDiffIndex(targetIndex);
+
+      // Clear navigation direction in store
+      setNavigationDirection(null);
+
+      // Scroll to the diff
+      const change = changes[targetIndex];
+      const line =
+        change.modifiedEndLineNumber > 0
+          ? change.modifiedStartLineNumber
+          : Math.max(1, change.modifiedStartLineNumber);
+
+      setTimeout(() => {
+        const modifiedEditor = editor.getModifiedEditor();
+        modifiedEditor.revealLineInCenter(line, monaco.editor.ScrollType.Immediate);
+      }, 50);
+
+      // Highlight
+      highlightCurrentDiff(targetIndex, changes);
+    },
+    [setNavigationDirection, highlightCurrentDiff]
+  );
+
   const handleEditorMount = useCallback(
     (editor: DiffEditorInstance) => {
       editorRef.current = editor;
-      hasAutoNavigatedRef.current = false;
+      editorFilePathRef.current = file?.path ?? null; // Track the file this editor is displaying
 
       // Track the current models for cleanup
       const currentModel = editor.getModel();
@@ -227,49 +275,125 @@ export function DiffViewer({
         modelsRef.current.modified = currentModel.modified;
       }
 
-      // Use onDidUpdateDiff to ensure diff is fully computed
-      editor.onDidUpdateDiff(() => {
+      // Use onDidUpdateDiff to trigger auto-navigation when diff is computed
+      const disposable = editor.onDidUpdateDiff(() => {
         const changes = editor.getLineChanges();
-        if (changes && changes.length > 0) {
+        if (changes) {
           setLineChanges(changes);
-
-          // Auto-navigate based on direction (only once per file)
-          if (navigationDirection && !hasAutoNavigatedRef.current) {
-            hasAutoNavigatedRef.current = true;
-            const targetIndex = navigationDirection === 'next' ? 0 : changes.length - 1;
-            setCurrentDiffIndex(targetIndex);
-            setNavigationDirection(null);
-
-            // Scroll to the diff
-            const change = changes[targetIndex];
-            // Use modifiedStartLineNumber, fallback for deletions
-            const line =
-              change.modifiedEndLineNumber > 0
-                ? change.modifiedStartLineNumber
-                : Math.max(1, change.modifiedStartLineNumber);
-            editor.getModifiedEditor().revealLineInCenter(line);
-
-            // Highlight
-            highlightCurrentDiff(targetIndex, changes);
-          } else if (!hasAutoNavigatedRef.current) {
-            setCurrentDiffIndex(-1);
-          }
-        } else if (changes) {
-          setLineChanges(changes);
-          setCurrentDiffIndex(-1);
-          if (navigationDirection) {
-            setNavigationDirection(null);
-          }
+          lineChangesRef.current = changes;
+          // Try to perform auto-navigation immediately
+          performAutoNavigation(editor, changes);
         }
       });
+
+      // Check if there's a pending navigation that should be performed
+      // Use setTimeout to ensure this runs after onDidUpdateDiff may have fired
+      setTimeout(() => {
+        const pendingDirection = pendingNavigationDirectionRef.current;
+        if (pendingDirection && !hasAutoNavigatedRef.current) {
+          // Try to get lineChanges - they should be ready by now
+          const changes = editor.getLineChanges();
+          if (changes && changes.length > 0) {
+            setLineChanges(changes);
+            lineChangesRef.current = changes;
+            performAutoNavigation(editor, changes);
+          } else {
+            // If changes not ready yet, poll for them
+            let attempts = 0;
+            const maxAttempts = 10;
+            const pollTimer = setInterval(() => {
+              attempts++;
+              const pollChanges = editor.getLineChanges();
+              if (pollChanges) {
+                clearInterval(pollTimer);
+                setLineChanges(pollChanges);
+                lineChangesRef.current = pollChanges;
+                performAutoNavigation(editor, pollChanges);
+              } else if (attempts >= maxAttempts) {
+                clearInterval(pollTimer);
+              }
+            }, 50);
+          }
+        }
+      }, 0);
+
+      // Store disposable for cleanup
+      return () => disposable.dispose();
     },
-    [navigationDirection, setNavigationDirection, highlightCurrentDiff]
+    [file?.path, performAutoNavigation]
   );
+
+  // Sync pendingNavigationDirectionRef with navigationDirection state
+  useEffect(() => {
+    if (navigationDirection) {
+      // Increment navigation ID to trigger a new navigation cycle
+      navigationIdRef.current += 1;
+      hasAutoNavigatedRef.current = false;
+      pendingNavigationDirectionRef.current = navigationDirection;
+      // Don't try to get lineChanges here - editorRef might still point to old editor
+      // The navigation will be triggered in handleEditorMount or onDidUpdateDiff
+    }
+  }, [navigationDirection]);
+
+  // Manually fetch lineChanges when file changes or diff content changes
+  // This is needed because onDidUpdateDiff doesn't fire when switching back to a previously-viewed file
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    // Check if the editor is displaying the correct file
+    // If editorFilePathRef doesn't match current file, the editor hasn't remounted yet
+    if (editorFilePathRef.current !== file?.path) {
+      return;
+    }
+
+    // Check if diff content has actually changed
+    const currentContent = diff ? `${diff.original}${diff.modified}` : '';
+    if (currentContent === diffContentRef.current) {
+      // Content hasn't changed, skip
+      return;
+    }
+
+    diffContentRef.current = currentContent;
+
+    // When models change, Monaco computes the diff asynchronously
+    // We need to poll getLineChanges() until it returns a result (or times out)
+    let attempts = 0;
+    const maxAttempts = 20; // 20 * 50ms = 1 second max wait
+
+    const checkLineChanges = () => {
+      const changes = editor.getLineChanges();
+
+      if (changes) {
+        setLineChanges(changes);
+        lineChangesRef.current = changes;
+        // Perform auto-navigation with the fresh changes
+        performAutoNavigation(editor, changes);
+        return true; // Success
+      }
+      return false; // Not ready yet
+    };
+
+    // Try immediately first
+    if (checkLineChanges()) {
+      return;
+    }
+
+    // Poll until we get results or timeout
+    const timer = setInterval(() => {
+      attempts++;
+      if (checkLineChanges() || attempts >= maxAttempts) {
+        clearInterval(timer);
+      }
+    }, 50);
+
+    return () => clearInterval(timer);
+  }, [diff, file?.path, performAutoNavigation]);
 
   const navigateToDiff = useCallback(
     (direction: 'prev' | 'next') => {
       const editor = editorRef.current;
-      if (!editor || lineChanges.length === 0) {
+      if (!editor || !lineChanges || lineChanges.length === 0) {
         // No diffs, try to switch file
         if (direction === 'prev' && onPrevFile) onPrevFile();
         if (direction === 'next' && onNextFile) onNextFile();
@@ -350,11 +474,12 @@ export function DiffViewer({
   useEffect(() => {
     // Reset state for new file (don't dispose models - key change will unmount/remount)
     setCurrentDiffIndex(-1);
-    setLineChanges([]);
+    // Don't reset lineChanges - let the manual fetch or onDidUpdateDiff handle it
     setBoundaryHint(null);
     hasAutoNavigatedRef.current = false;
-    resetEditorState();
-  }, [file?.path, file?.staged, resetEditorState]);
+    // Don't reset editorRef - it will be set when the new DiffEditor mounts
+    // Also don't clear pendingNavigationDirectionRef - we want to preserve it across the file change
+  }, [file?.path, file?.staged]);
 
   if (!file) {
     return (
@@ -414,7 +539,7 @@ export function DiffViewer({
         {/* Navigation buttons */}
         <div className="flex items-center gap-1">
           {/* Diff count */}
-          {lineChanges.length > 0 && (
+          {lineChanges && lineChanges.length > 0 && (
             <span className="mr-2 text-xs text-muted-foreground">
               {currentDiffIndex >= 0 ? currentDiffIndex + 1 : '-'}/{lineChanges.length}
             </span>

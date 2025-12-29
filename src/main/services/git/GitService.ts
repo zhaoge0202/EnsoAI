@@ -51,19 +51,37 @@ export class GitService {
   }
 
   async getLog(maxCount = 50, skip = 0): Promise<GitLogEntry[]> {
-    const options: string[] = [`--max-count=${maxCount}`];
+    const options: string[] = [
+      `-n${maxCount}`,
+      '--pretty=format:%H%x01%ai%x01%an%x01%ae%x01%s%x01%D',
+    ];
     if (skip > 0) {
       options.push(`--skip=${skip}`);
     }
-    const log = await this.git.log(options);
-    return log.all.map((entry) => ({
-      hash: entry.hash,
-      date: entry.date,
-      message: entry.message,
-      author_name: entry.author_name,
-      author_email: entry.author_email,
-      refs: entry.refs,
-    }));
+    const result = await this.git.raw(['log', ...options]);
+    const entries = result
+      .trim()
+      .split('\n')
+      .filter((line) => line.trim());
+
+    return entries.map((line) => {
+      const parts = line.split('\x01');
+      const hash = parts[0] || '';
+      const date = parts[1] || '';
+      const author_name = parts[2] || '';
+      const author_email = parts[3] || '';
+      const message = parts[4] || '';
+      const refs = parts[5] || '';
+
+      return {
+        hash,
+        date,
+        message: message.trim(),
+        author_name,
+        author_email,
+        refs: refs ? refs.replace('HEAD ->', '').trim() || undefined : undefined,
+      };
+    });
   }
 
   async commit(message: string, files?: string[]): Promise<string> {

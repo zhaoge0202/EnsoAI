@@ -38,11 +38,10 @@ import { useSourceControlStore } from '@/stores/sourceControl';
 import { ChangesList } from './ChangesList';
 import { CommitBox } from './CommitBox';
 import { CommitDiffViewer } from './CommitDiffViewer';
-import { CommitFileList } from './CommitFileList';
 import { CommitHistoryList } from './CommitHistoryList';
 import { panelTransition } from './constants';
 import { DiffViewer } from './DiffViewer';
-import { usePanelResize, useSecondaryPanelResize } from './usePanelResize';
+import { usePanelResize } from './usePanelResize';
 import { useSourceControlActions } from './useSourceControlActions';
 
 interface SourceControlPanelProps {
@@ -63,12 +62,12 @@ export function SourceControlPanel({
   // Accordion state - collapsible sections
   const [changesExpanded, setChangesExpanded] = useState(true);
   const [historyExpanded, setHistoryExpanded] = useState(false);
-  const [commitFilesExpanded, setCommitFilesExpanded] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // History view state
   const [selectedCommitHash, setSelectedCommitHash] = useState<string | null>(null);
   const [selectedCommitFile, setSelectedCommitFile] = useState<string | null>(null);
+  const [expandedCommitHash, setExpandedCommitHash] = useState<string | null>(null);
 
   const {
     data: changes,
@@ -177,13 +176,6 @@ export function SourceControlPanel({
   // Panel resize hooks
   const { width: panelWidth, isResizing, containerRef, handleMouseDown } = usePanelResize();
 
-  const {
-    width: commitFilesPanelWidth,
-    isResizing: isResizingCommitFiles,
-    panelRef: commitFilesPanelRef,
-    handleMouseDown: handleCommitFilesMouseDown,
-  } = useSecondaryPanelResize();
-
   // Source control actions
   const {
     handleStage,
@@ -202,16 +194,35 @@ export function SourceControlPanel({
     (file: { path: string; staged: boolean }) => {
       setSelectedCommitHash(null);
       setSelectedCommitFile(null);
+      setExpandedCommitHash(null);
       setSelectedFile(file);
     },
     [setSelectedFile]
   );
 
-  // Handle file click in commit history view - always navigate to first diff
+  // Handle commit click in history view - toggle expansion
+  const handleCommitClick = useCallback(
+    (hash: string) => {
+      if (expandedCommitHash === hash) {
+        // Collapse if already expanded
+        setExpandedCommitHash(null);
+        setSelectedCommitHash(null);
+        setSelectedCommitFile(null);
+      } else {
+        // Expand new commit
+        setExpandedCommitHash(hash);
+        setSelectedCommitHash(hash);
+        setSelectedCommitFile(null);
+      }
+    },
+    [expandedCommitHash]
+  );
+
+  // Handle file click in commit history view
   const handleCommitFileClick = useCallback(
     (filePath: string) => {
       setSelectedCommitFile(filePath);
-      setNavigationDirection('next'); // Navigate to first diff
+      setNavigationDirection('next');
     },
     [setNavigationDirection]
   );
@@ -441,11 +452,7 @@ export function SourceControlPanel({
                     <CommitHistoryList
                       commits={commits}
                       selectedHash={selectedCommitHash}
-                      onCommitClick={(hash) => {
-                        setSelectedCommitHash(hash);
-                        setSelectedCommitFile(null);
-                        setCommitFilesExpanded(true);
-                      }}
+                      onCommitClick={handleCommitClick}
                       isLoading={commitsLoading}
                       isFetchingNextPage={isFetchingNextPage}
                       hasNextPage={hasNextPage}
@@ -454,6 +461,11 @@ export function SourceControlPanel({
                           fetchNextPage();
                         }
                       }}
+                      expandedCommitHash={expandedCommitHash}
+                      commitFiles={commitFiles}
+                      commitFilesLoading={commitFilesLoading}
+                      selectedFile={selectedCommitFile}
+                      onFileClick={handleCommitFileClick}
                     />
                   </div>
                 )}
@@ -475,65 +487,21 @@ export function SourceControlPanel({
           </div>
         )}
 
-        {/* Right: Diff Viewer or Commit Details */}
+        {/* Right: Diff Viewer */}
         <div className="flex flex-1 overflow-hidden">
           {selectedCommitHash ? (
-            <>
-              {/* Commit File List (Collapsible) */}
-              <AnimatePresence initial={false}>
-                {commitFilesExpanded && (
-                  <motion.div
-                    key="commit-files"
-                    ref={commitFilesPanelRef}
-                    className="flex h-full shrink-0 overflow-hidden"
-                    initial={{ width: 0, opacity: 0 }}
-                    animate={{ width: commitFilesPanelWidth + 4, opacity: 1 }}
-                    exit={{ width: 0, opacity: 0 }}
-                    transition={panelTransition}
-                  >
-                    <div
-                      className="h-full shrink-0 border-r"
-                      style={{ width: commitFilesPanelWidth }}
-                    >
-                      <CommitFileList
-                        files={commitFiles}
-                        selectedFile={selectedCommitFile}
-                        onFileClick={handleCommitFileClick}
-                        isLoading={commitFilesLoading}
-                        commitHash={selectedCommitHash}
-                        onCollapse={() => setCommitFilesExpanded(false)}
-                      />
-                    </div>
-                    {/* Resize Handle for Commit Files Panel */}
-                    <div
-                      className={cn(
-                        'group flex w-1 shrink-0 cursor-col-resize items-center justify-center hover:bg-accent',
-                        isResizingCommitFiles && 'bg-accent'
-                      )}
-                      onMouseDown={handleCommitFilesMouseDown}
-                    >
-                      <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100" />
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Commit Diff Viewer */}
-              <div className="flex-1 overflow-hidden">
-                <CommitDiffViewer
-                  rootPath={rootPath}
-                  fileDiff={commitDiff}
-                  filePath={selectedCommitFile}
-                  isLoading={commitDiffLoading}
-                  filesCollapsed={!commitFilesExpanded}
-                  onExpandFiles={() => setCommitFilesExpanded(true)}
-                  onPrevFile={handlePrevCommitFile}
-                  onNextFile={handleNextCommitFile}
-                  hasPrevFile={currentCommitFileIndex > 0}
-                  hasNextFile={currentCommitFileIndex < commitFiles.length - 1}
-                />
-              </div>
-            </>
+            <div className="flex-1 overflow-hidden">
+              <CommitDiffViewer
+                rootPath={rootPath}
+                fileDiff={commitDiff}
+                filePath={selectedCommitFile}
+                isLoading={commitDiffLoading}
+                onPrevFile={handlePrevCommitFile}
+                onNextFile={handleNextCommitFile}
+                hasPrevFile={currentCommitFileIndex > 0}
+                hasNextFile={currentCommitFileIndex < commitFiles.length - 1}
+              />
+            </div>
           ) : (
             <div className="flex-1 overflow-hidden">
               <DiffViewer
