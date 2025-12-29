@@ -533,6 +533,23 @@ export function HapiSettings() {
         <p className="text-sm text-muted-foreground">
           {t('Run agents through Happy for enhanced experience')}
         </p>
+
+        {/* Happy Enable Switch */}
+        <div className="mt-4 flex items-center justify-between">
+          <div className="space-y-0.5">
+            <span className="text-sm font-medium">{t('Enable Happy Agent')}</span>
+            <p className="text-xs text-muted-foreground">
+              {happyGlobal?.installed
+                ? t('Use Happy to run supported agents')
+                : t('Install Happy globally to enable this feature')}
+            </p>
+          </div>
+          <Switch
+            checked={hapiSettings.happyEnabled}
+            onCheckedChange={(checked) => setHapiSettings({ happyEnabled: checked })}
+            disabled={happyGlobal === null || !happyGlobal.installed}
+          />
+        </div>
       </div>
     </div>
   );

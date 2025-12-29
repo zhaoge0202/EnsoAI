@@ -264,9 +264,9 @@ export function AgentSettings() {
   }, [cliStatus, hapiSettings.enabled]);
 
   // Get Happy agents (virtual agents that use happy wrapper)
-  // Only shown when happy is globally installed
+  // Only shown when happy is globally installed AND enabled in settings
   const happyAgentInfos = React.useMemo(() => {
-    if (!happyGlobal.installed) return [];
+    if (!happyGlobal.installed || !hapiSettings.happyEnabled) return [];
 
     const infos: Array<{
       id: string;
@@ -297,7 +297,7 @@ export function AgentSettings() {
     }
 
     return infos;
-  }, [cliStatus, happyGlobal.installed]);
+  }, [cliStatus, happyGlobal.installed, hapiSettings.happyEnabled]);
 
   return (
     <div className="space-y-6">

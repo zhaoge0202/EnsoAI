@@ -638,6 +638,9 @@ export const zhTranslations: Record<string, string> = {
   'Happy Agents': 'Happy Agent',
   'Agents running through Happy': '通过 Happy 运行的 Agent',
   'Run agents through Happy for enhanced experience': '通过 Happy 运行 Agent 获得增强体验',
+  'Enable Happy Agent': '启用 Happy Agent',
+  'Use Happy to run supported agents': '使用 Happy 运行支持的 Agent',
+  'Install Happy globally to enable this feature': '全局安装 Happy 以启用此功能',
 };
 
 export function normalizeLocale(input?: string): Locale {

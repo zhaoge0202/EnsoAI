@@ -212,6 +212,8 @@ export interface HapiSettings {
   tunnelMode: TunnelMode;
   tunnelToken: string;
   useHttp2: boolean;
+  // Happy settings
+  happyEnabled: boolean;
 }
 
 export const defaultHapiSettings: HapiSettings = {
@@ -226,6 +228,8 @@ export const defaultHapiSettings: HapiSettings = {
   tunnelMode: 'quick',
   tunnelToken: '',
   useHttp2: true,
+  // Happy defaults
+  happyEnabled: false,
 };
 
 // Editor settings
