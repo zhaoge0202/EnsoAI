@@ -375,6 +375,7 @@ interface SettingsState {
   codeReview: CodeReviewSettings;
   allowNightlyUpdates: boolean;
   hapiSettings: HapiSettings;
+  defaultWorktreePath: string; // Default path for creating worktrees
 
   setTheme: (theme: Theme) => void;
   setLanguage: (language: Locale) => void;
@@ -408,6 +409,7 @@ interface SettingsState {
   setCodeReview: (settings: Partial<CodeReviewSettings>) => void;
   setAllowNightlyUpdates: (enabled: boolean) => void;
   setHapiSettings: (settings: Partial<HapiSettings>) => void;
+  setDefaultWorktreePath: (path: string) => void;
 }
 
 const defaultAgentSettings: AgentSettings = {
@@ -453,6 +455,7 @@ export const useSettingsStore = create<SettingsState>()(
       codeReview: defaultCodeReviewSettings,
       allowNightlyUpdates: false,
       hapiSettings: defaultHapiSettings,
+      defaultWorktreePath: '', // Empty means use default ~/ensoai/workspaces
 
       setTheme: (theme) => {
         const terminalTheme = get().terminalTheme;
@@ -577,6 +580,7 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           hapiSettings: { ...state.hapiSettings, ...settings },
         })),
+      setDefaultWorktreePath: (defaultWorktreePath) => set({ defaultWorktreePath }),
     }),
     {
       name: 'enso-settings',

@@ -665,6 +665,10 @@ export const zhTranslations: Record<string, string> = {
   'Select a pull request': '请选择一个 Pull Request',
   'Leave empty to use the PR branch name:': '留空则使用 PR 分支名:',
   optional: '可选',
+  // Worktree settings
+  'Git worktree save location settings': 'Git Worktree 保存位置设置',
+  'Default directory for new worktrees. Leave empty to use ~/ensoai/workspaces':
+    '新建 Worktree 的默认目录，留空则使用 ~/ensoai/workspaces',
 };
 
 export function normalizeLocale(input?: string): Locale {

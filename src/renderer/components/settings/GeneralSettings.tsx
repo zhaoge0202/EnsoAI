@@ -1,8 +1,9 @@
 import type { Locale } from '@shared/i18n';
 import type { ShellInfo } from '@shared/types';
-import { RefreshCw } from 'lucide-react';
+import { FolderOpen, RefreshCw } from 'lucide-react';
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectItem,
@@ -40,6 +41,8 @@ export function GeneralSettings() {
     setAgentNotificationEnterDelay,
     allowNightlyUpdates,
     setAllowNightlyUpdates,
+    defaultWorktreePath,
+    setDefaultWorktreePath,
   } = useSettingsStore();
   const { t, locale } = useI18n();
 
@@ -136,6 +139,41 @@ export function GeneralSettings() {
               <SelectItem value="zh">{t('Chinese')}</SelectItem>
             </SelectPopup>
           </Select>
+        </div>
+      </div>
+
+      <div className="border-t pt-4">
+        <h3 className="text-lg font-medium">{t('Worktree')}</h3>
+        <p className="text-sm text-muted-foreground">{t('Git worktree save location settings')}</p>
+      </div>
+
+      {/* Default Worktree Path */}
+      <div className="grid grid-cols-[100px_1fr] items-start gap-4">
+        <span className="text-sm font-medium mt-2">{t('Save location')}</span>
+        <div className="space-y-1.5">
+          <div className="flex gap-2">
+            <Input
+              value={defaultWorktreePath}
+              onChange={(e) => setDefaultWorktreePath(e.target.value)}
+              placeholder="~/ensoai/workspaces"
+              className="flex-1"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={async () => {
+                const result = await window.electronAPI.dialog.openDirectory();
+                if (result) {
+                  setDefaultWorktreePath(result);
+                }
+              }}
+            >
+              <FolderOpen className="h-4 w-4" />
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t('Default directory for new worktrees. Leave empty to use ~/ensoai/workspaces')}
+          </p>
         </div>
       </div>
 

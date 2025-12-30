@@ -34,6 +34,7 @@ import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useI18n } from '@/i18n';
+import { useSettingsStore } from '@/stores/settings';
 
 // Get display name for branch (remove remotes/ prefix for remote branches)
 const getBranchDisplayName = (name: string) => {
@@ -60,6 +61,7 @@ export function CreateWorktreeDialog({
   trigger,
 }: CreateWorktreeDialogProps) {
   const { t } = useI18n();
+  const { defaultWorktreePath } = useSettingsStore();
   const [open, setOpen] = React.useState(false);
   const [mode, setMode] = React.useState<CreateMode>('branch');
   const [baseBranch, setBaseBranch] = React.useState<string>('');
@@ -73,7 +75,8 @@ export function CreateWorktreeDialog({
   const [prsLoading, setPrsLoading] = React.useState(false);
   const [selectedPr, setSelectedPr] = React.useState<PullRequest | null>(null);
 
-  // Fixed path: ~/ensoai/workspaces/{projectName}/{branchName}
+  // Worktree path: {defaultWorktreePath}/{projectName}/{branchName}
+  // Falls back to ~/ensoai/workspaces if not configured
   const home = window.electronAPI?.env?.HOME || '';
   const isWindows = window.electronAPI?.env?.platform === 'win32';
   const pathSep = isWindows ? '\\' : '/';
@@ -82,7 +85,10 @@ export function CreateWorktreeDialog({
     // Extract last directory name from projectName when a full path is passed in.
     const normalizedName = projectName.replace(/\\/g, '/');
     const projectBaseName = normalizedName.split('/').filter(Boolean).pop() || projectName;
-    return [home, 'ensoai', 'workspaces', projectBaseName, branchName].join(pathSep);
+
+    // Use configured path or default to ~/ensoai/workspaces
+    const basePath = defaultWorktreePath || [home, 'ensoai', 'workspaces'].join(pathSep);
+    return [basePath, projectBaseName, branchName].join(pathSep);
   };
 
   // Branch item type for combobox
