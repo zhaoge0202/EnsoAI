@@ -581,6 +581,55 @@ export const useSettingsStore = create<SettingsState>()(
     {
       name: 'enso-settings',
       storage: createJSONStorage(() => electronStorage),
+      // Deep merge nested objects to preserve new default fields when upgrading
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<SettingsState>;
+        return {
+          ...currentState,
+          ...persisted,
+          // Deep merge keybindings to ensure new fields get default values
+          terminalKeybindings: {
+            ...currentState.terminalKeybindings,
+            ...persisted.terminalKeybindings,
+          },
+          mainTabKeybindings: {
+            ...currentState.mainTabKeybindings,
+            ...persisted.mainTabKeybindings,
+          },
+          agentKeybindings: {
+            ...currentState.agentKeybindings,
+            ...persisted.agentKeybindings,
+          },
+          sourceControlKeybindings: {
+            ...currentState.sourceControlKeybindings,
+            ...persisted.sourceControlKeybindings,
+          },
+          searchKeybindings: {
+            ...currentState.searchKeybindings,
+            ...persisted.searchKeybindings,
+          },
+          editorSettings: {
+            ...currentState.editorSettings,
+            ...persisted.editorSettings,
+          },
+          claudeCodeIntegration: {
+            ...currentState.claudeCodeIntegration,
+            ...persisted.claudeCodeIntegration,
+          },
+          commitMessageGenerator: {
+            ...currentState.commitMessageGenerator,
+            ...persisted.commitMessageGenerator,
+          },
+          codeReview: {
+            ...currentState.codeReview,
+            ...persisted.codeReview,
+          },
+          hapiSettings: {
+            ...currentState.hapiSettings,
+            ...persisted.hapiSettings,
+          },
+        };
+      },
       onRehydrateStorage: () => (state) => {
         if (state) {
           if (state.theme === 'sync-terminal') {
