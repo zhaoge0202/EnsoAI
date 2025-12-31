@@ -590,6 +590,15 @@ export function useXterm({
           cols: terminalRef.current.cols,
           rows: terminalRef.current.rows,
         });
+        // Clear WebGL texture atlas on resize to prevent glitches
+        const addon = rendererAddonRef.current;
+        if (addon && 'clearTextureAtlas' in addon) {
+          try {
+            (addon as WebglAddon).clearTextureAtlas();
+          } catch {
+            // Ignore if addon is disposed
+          }
+        }
       }
     };
 
@@ -639,6 +648,15 @@ export function useXterm({
     const handleVisibilityChange = () => {
       if (!document.hidden && terminalRef.current) {
         requestAnimationFrame(() => {
+          // Clear WebGL texture atlas when page becomes visible (GPU resources may have been reclaimed)
+          const addon = rendererAddonRef.current;
+          if (addon && 'clearTextureAtlas' in addon) {
+            try {
+              (addon as WebglAddon).clearTextureAtlas();
+            } catch {
+              // Ignore if addon is disposed
+            }
+          }
           terminalRef.current?.refresh(0, terminalRef.current.rows - 1);
           if (isActive) {
             fit();
