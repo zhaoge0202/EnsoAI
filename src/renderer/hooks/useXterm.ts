@@ -343,12 +343,16 @@ export function useXterm({
               end: { x: endIndex + 1, y: bufferLineNumber },
             },
             text: fullMatch.trim(),
-            activate: () => {
+            activate: async () => {
               // Resolve relative path to absolute
               const basePath = cwdRef.current || '';
               const absolutePath = filePath.startsWith('/')
                 ? filePath
                 : `${basePath}/${filePath}`.replace(/\/\.\//g, '/');
+
+              // Check if file exists before navigating
+              const exists = await window.electronAPI.file.exists(absolutePath);
+              if (!exists) return;
 
               navigateToFile({
                 path: absolutePath,

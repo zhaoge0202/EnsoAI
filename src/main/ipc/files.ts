@@ -60,6 +60,15 @@ export function registerFileHandlers(): void {
     }
   );
 
+  ipcMain.handle(IPC_CHANNELS.FILE_EXISTS, async (_, filePath: string): Promise<boolean> => {
+    try {
+      const stats = await stat(filePath);
+      return stats.isFile();
+    } catch {
+      return false;
+    }
+  });
+
   ipcMain.handle(
     IPC_CHANNELS.FILE_LIST,
     async (_, dirPath: string, gitRoot?: string): Promise<FileEntry[]> => {

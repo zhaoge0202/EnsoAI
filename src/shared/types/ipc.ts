@@ -50,6 +50,7 @@ export const IPC_CHANNELS = {
   FILE_MOVE: 'file:move',
   FILE_DELETE: 'file:delete',
   FILE_LIST: 'file:list',
+  FILE_EXISTS: 'file:exists',
   FILE_WATCH_START: 'file:watch:start',
   FILE_WATCH_STOP: 'file:watch:stop',
   FILE_CHANGE: 'file:change',
