@@ -271,7 +271,7 @@ jobs:
 
           # installer.yaml - explicitly set Architecture: x64 (komac bug workaround)
           cat > "$MANIFEST_DIR/J3n5en.EnsoAI.installer.yaml" << EOF
-          # yaml-language-server: \$schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+          # yaml-language-server: \$schema=https://aka.ms/winget-manifest.installer.1.12.0.schema.json
 
           PackageIdentifier: J3n5en.EnsoAI
           PackageVersion: ${VERSION}
@@ -290,12 +290,12 @@ jobs:
                 Silent: /S
                 SilentWithProgress: /S
           ManifestType: installer
-          ManifestVersion: 1.6.0
+          ManifestVersion: 1.12.0
           EOF
 
           # locale.yaml
           cat > "$MANIFEST_DIR/J3n5en.EnsoAI.locale.en-US.yaml" << EOF
-          # yaml-language-server: \$schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+          # yaml-language-server: \$schema=https://aka.ms/winget-manifest.defaultLocale.1.12.0.schema.json
 
           PackageIdentifier: J3n5en.EnsoAI
           PackageVersion: ${VERSION}
@@ -323,18 +323,18 @@ jobs:
             - worktree
           ReleaseNotesUrl: https://github.com/J3n5en/EnsoAI/releases/tag/${TAG}
           ManifestType: defaultLocale
-          ManifestVersion: 1.6.0
+          ManifestVersion: 1.12.0
           EOF
 
           # version.yaml
           cat > "$MANIFEST_DIR/J3n5en.EnsoAI.yaml" << EOF
-          # yaml-language-server: \$schema=https://aka.ms/winget-manifest.version.1.6.0.schema.json
+          # yaml-language-server: \$schema=https://aka.ms/winget-manifest.version.1.12.0.schema.json
 
           PackageIdentifier: J3n5en.EnsoAI
           PackageVersion: ${VERSION}
           DefaultLocale: en-US
           ManifestType: version
-          ManifestVersion: 1.6.0
+          ManifestVersion: 1.12.0
           EOF
 
           # Remove leading spaces from heredoc
