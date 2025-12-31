@@ -3,6 +3,7 @@ import {
   REPOSITORY_DEFAULT,
   REPOSITORY_MAX,
   REPOSITORY_MIN,
+  TREE_SIDEBAR_DEFAULT,
   TREE_SIDEBAR_MIN,
   WORKTREE_DEFAULT,
   WORKTREE_MAX,
@@ -20,6 +21,9 @@ export function usePanelResize(layoutMode: LayoutMode = 'columns') {
   const [worktreeWidth, setWorktreeWidth] = useState(() =>
     getStoredNumber(STORAGE_KEYS.WORKTREE_WIDTH, WORKTREE_DEFAULT)
   );
+  const [treeSidebarWidth, setTreeSidebarWidth] = useState(() =>
+    getStoredNumber(STORAGE_KEYS.TREE_SIDEBAR_WIDTH, TREE_SIDEBAR_DEFAULT)
+  );
   const [resizing, setResizing] = useState<ResizePanel>(null);
 
   const startXRef = useRef(0);
@@ -30,14 +34,13 @@ export function usePanelResize(layoutMode: LayoutMode = 'columns') {
       e.preventDefault();
       setResizing(panel);
       startXRef.current = e.clientX;
-      // In tree mode, track combined width for repository panel resize
       if (layoutMode === 'tree' && panel === 'repository') {
-        startWidthRef.current = repositoryWidth + worktreeWidth;
+        startWidthRef.current = treeSidebarWidth;
       } else {
         startWidthRef.current = panel === 'repository' ? repositoryWidth : worktreeWidth;
       }
     },
-    [repositoryWidth, worktreeWidth, layoutMode]
+    [repositoryWidth, worktreeWidth, treeSidebarWidth, layoutMode]
   );
 
   useEffect(() => {
@@ -49,11 +52,9 @@ export function usePanelResize(layoutMode: LayoutMode = 'columns') {
 
       if (resizing === 'repository') {
         if (layoutMode === 'tree') {
-          // In tree mode, resize the combined sidebar with tree-specific min
           const treeMax = REPOSITORY_MAX + WORKTREE_MAX;
-          const clampedTotal = Math.max(TREE_SIDEBAR_MIN, Math.min(treeMax, newWidth));
-          // Distribute the change to repositoryWidth only
-          setRepositoryWidth(clampedTotal - worktreeWidth);
+          const clampedWidth = Math.max(TREE_SIDEBAR_MIN, Math.min(treeMax, newWidth));
+          setTreeSidebarWidth(clampedWidth);
         } else {
           setRepositoryWidth(Math.max(REPOSITORY_MIN, Math.min(REPOSITORY_MAX, newWidth)));
         }
@@ -73,7 +74,7 @@ export function usePanelResize(layoutMode: LayoutMode = 'columns') {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [resizing, layoutMode, worktreeWidth]);
+  }, [resizing, layoutMode]);
 
   // Save panel sizes to localStorage
   useEffect(() => {
@@ -84,10 +85,15 @@ export function usePanelResize(layoutMode: LayoutMode = 'columns') {
     localStorage.setItem(STORAGE_KEYS.WORKTREE_WIDTH, String(worktreeWidth));
   }, [worktreeWidth]);
 
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.TREE_SIDEBAR_WIDTH, String(treeSidebarWidth));
+  }, [treeSidebarWidth]);
+
   return {
     repositoryWidth,
     worktreeWidth,
-    resizing,
+    treeSidebarWidth,
+    resizing: !!resizing,
     handleResizeStart,
   };
 }

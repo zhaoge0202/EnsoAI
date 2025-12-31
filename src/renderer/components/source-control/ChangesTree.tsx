@@ -91,7 +91,29 @@ function buildTree(files: FileChange[]): TreeNode[] {
     }
   }
 
-  return root;
+  return compactTree(root);
+}
+
+// 压缩只有单个子目录的节点，类似 VS Code 的 Compact Folders
+function compactTree(nodes: TreeNode[]): TreeNode[] {
+  return nodes.map((node) => {
+    if (node.type === 'file') return node;
+
+    // 递归处理子节点
+    const compactedChildren = node.children ? compactTree(node.children) : [];
+
+    // 如果只有一个子节点且是目录，则合并
+    if (compactedChildren.length === 1 && compactedChildren[0].type === 'folder') {
+      const child = compactedChildren[0];
+      return {
+        ...child,
+        name: `${node.name}/${child.name}`,
+        // path 保持为最深层的路径，用于展开/折叠状态
+      };
+    }
+
+    return { ...node, children: compactedChildren };
+  });
 }
 
 interface FileTreeNodeProps {
@@ -139,7 +161,9 @@ function FileTreeNode({
             <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           )}
           <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span className="min-w-0 flex-1 truncate text-muted-foreground">{node.name}</span>
+          <span className="min-w-0 flex-1 truncate text-muted-foreground" title={node.path}>
+            {node.name}
+          </span>
         </div>
 
         {isExpanded &&
@@ -187,7 +211,9 @@ function FileTreeNode({
         {file.status}
       </span>
 
-      <span className="min-w-0 flex-1 truncate">{node.name}</span>
+      <span className="min-w-0 flex-1 truncate" title={file.path}>
+        {node.name}
+      </span>
 
       {/* Action buttons */}
       <div className="hidden shrink-0 items-center group-hover:flex">

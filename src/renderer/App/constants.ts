@@ -19,4 +19,5 @@ export const WORKTREE_MAX = 400;
 export const WORKTREE_DEFAULT = 280;
 
 // Tree layout constraints
-export const TREE_SIDEBAR_MIN = 240;
+export const TREE_SIDEBAR_MIN = 200;
+export const TREE_SIDEBAR_DEFAULT = 280;

@@ -10,6 +10,7 @@ export const STORAGE_KEYS = {
   WORKTREE_ORDER: 'enso-worktree-order', // per-repo worktree display order map
   REPOSITORY_WIDTH: 'enso-repository-width',
   WORKTREE_WIDTH: 'enso-worktree-width',
+  TREE_SIDEBAR_WIDTH: 'enso-tree-sidebar-width',
   REPOSITORY_COLLAPSED: 'enso-repository-collapsed',
   WORKTREE_COLLAPSED: 'enso-worktree-collapsed',
 } as const;

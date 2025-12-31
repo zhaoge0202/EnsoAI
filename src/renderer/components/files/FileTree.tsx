@@ -193,6 +193,30 @@ interface FileTreeNodeComponentProps {
   onCopyPath: (path: string) => void;
 }
 
+// 获取压缩后的显示信息：合并只有单个子目录的路径
+function getCompactedNode(
+  node: FileTreeNode,
+  expandedPaths: Set<string>
+): { displayName: string; actualNode: FileTreeNode; compactedPaths: string[] } {
+  const compactedPaths: string[] = [];
+  let current = node;
+  let displayName = node.name;
+
+  // 只在目录展开且只有一个子目录时压缩
+  while (
+    current.isDirectory &&
+    expandedPaths.has(current.path) &&
+    current.children?.length === 1 &&
+    current.children[0].isDirectory
+  ) {
+    compactedPaths.push(current.path);
+    current = current.children[0];
+    displayName = `${displayName}/${current.name}`;
+  }
+
+  return { displayName, actualNode: current, compactedPaths };
+}
+
 function FileTreeNodeComponent({
   node,
   depth,
@@ -213,20 +237,24 @@ function FileTreeNodeComponent({
   const inputRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
-  const isExpanded = expandedPaths.has(node.path);
-  const isSelected = selectedPath === node.path;
-  const isEditing = editingPath === node.path;
 
-  const Icon = getFileIcon(node.name, node.isDirectory, isExpanded);
-  const iconColor = getFileIconColor(node.name, node.isDirectory);
+  // 获取压缩后的节点信息
+  const { displayName, actualNode, compactedPaths } = getCompactedNode(node, expandedPaths);
+  const isExpanded = expandedPaths.has(actualNode.path);
+  const isSelected = selectedPath === actualNode.path;
+  const isEditing = editingPath === actualNode.path;
+
+  const Icon = getFileIcon(actualNode.name, actualNode.isDirectory, isExpanded);
+  const iconColor = getFileIconColor(actualNode.name, actualNode.isDirectory);
 
   const handleClick = useCallback(() => {
-    if (node.isDirectory) {
-      onToggleExpand(node.path);
+    if (actualNode.isDirectory) {
+      // 点击压缩节点时，展开/折叠实际节点
+      onToggleExpand(actualNode.path);
     } else {
-      onFileClick(node.path);
+      onFileClick(actualNode.path);
     }
-  }, [node, onToggleExpand, onFileClick]);
+  }, [actualNode, onToggleExpand, onFileClick]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -238,13 +266,13 @@ function FileTreeNodeComponent({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter') {
-        onFinishRename(node.path);
+        onFinishRename(actualNode.path);
       } else if (e.key === 'Escape') {
         onEditValueChange('');
-        onFinishRename(node.path);
+        onFinishRename(actualNode.path);
       }
     },
-    [node.path, onFinishRename, onEditValueChange]
+    [actualNode.path, onFinishRename, onEditValueChange]
   );
 
   return (
@@ -256,7 +284,7 @@ function FileTreeNodeComponent({
         className={cn(
           'flex h-7 cursor-pointer select-none items-center gap-1 rounded-sm px-2 text-sm hover:bg-accent/50',
           isSelected && 'bg-accent text-accent-foreground',
-          node.ignored && 'opacity-50'
+          actualNode.ignored && 'opacity-50'
         )}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
         onClick={handleClick}
@@ -264,7 +292,7 @@ function FileTreeNodeComponent({
         onKeyDown={(e) => e.key === 'Enter' && handleClick()}
       >
         {/* Chevron for directories */}
-        {node.isDirectory ? (
+        {actualNode.isDirectory ? (
           <ChevronRight
             className={cn(
               'h-4 w-4 shrink-0 text-muted-foreground transition-transform',
@@ -276,7 +304,7 @@ function FileTreeNodeComponent({
         )}
 
         {/* Icon */}
-        {node.isLoading ? (
+        {actualNode.isLoading ? (
           <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
         ) : (
           <Icon className={cn('h-4 w-4 shrink-0', iconColor)} />
@@ -288,14 +316,16 @@ function FileTreeNodeComponent({
             ref={inputRef}
             value={editValue}
             onChange={(e) => onEditValueChange(e.target.value)}
-            onBlur={() => onFinishRename(node.path)}
+            onBlur={() => onFinishRename(actualNode.path)}
             onKeyDown={handleKeyDown}
             className="h-5 min-w-0 flex-1 px-1 py-0 text-sm"
             autoFocus
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <span className="min-w-0 flex-1 truncate">{node.name}</span>
+          <span className="min-w-0 flex-1 truncate" title={actualNode.path}>
+            {displayName}
+          </span>
         )}
       </div>
 
@@ -308,39 +338,39 @@ function FileTreeNodeComponent({
             top: menuPosition.y,
           }}
         >
-          {node.isDirectory && (
+          {actualNode.isDirectory && (
             <>
-              <MenuItem onClick={() => onCreateFile(node.path)}>
+              <MenuItem onClick={() => onCreateFile(actualNode.path)}>
                 <FilePlus className="h-4 w-4" />
                 New File
               </MenuItem>
-              <MenuItem onClick={() => onCreateDirectory(node.path)}>
+              <MenuItem onClick={() => onCreateDirectory(actualNode.path)}>
                 <FolderPlus className="h-4 w-4" />
                 New Folder
               </MenuItem>
               <MenuSeparator />
             </>
           )}
-          <MenuItem onClick={() => onStartRename(node.path, node.name)}>
+          <MenuItem onClick={() => onStartRename(actualNode.path, actualNode.name)}>
             <Pencil className="h-4 w-4" />
             Rename
           </MenuItem>
-          <MenuItem onClick={() => onCopyPath(node.path)}>
+          <MenuItem onClick={() => onCopyPath(actualNode.path)}>
             <Copy className="h-4 w-4" />
             Copy Path
           </MenuItem>
           <MenuSeparator />
-          <MenuItem variant="destructive" onClick={() => onDelete(node.path)}>
+          <MenuItem variant="destructive" onClick={() => onDelete(actualNode.path)}>
             <Trash2 className="h-4 w-4" />
             Delete
           </MenuItem>
         </MenuPopup>
       </Menu>
 
-      {/* Children */}
-      {node.isDirectory && isExpanded && node.children && (
+      {/* Children - 渲染 actualNode 的子节点 */}
+      {actualNode.isDirectory && isExpanded && actualNode.children && (
         <div>
-          {node.children.map((child) => (
+          {actualNode.children.map((child) => (
             <FileTreeNodeComponent
               key={child.path}
               node={child}

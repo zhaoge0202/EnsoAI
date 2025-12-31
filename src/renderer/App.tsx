@@ -100,7 +100,7 @@ export default function App() {
   const layoutMode = useSettingsStore((s) => s.layoutMode);
 
   // Panel resize hook
-  const { repositoryWidth, worktreeWidth, resizing, handleResizeStart } =
+  const { repositoryWidth, worktreeWidth, treeSidebarWidth, resizing, handleResizeStart } =
     usePanelResize(layoutMode);
 
   const worktreeError = useWorktreeStore((s) => s.error);
@@ -618,9 +618,6 @@ export default function App() {
     if (!selectedRepo) throw new Error('No repository selected');
     return window.electronAPI.worktree.getConflictContent(selectedRepo, file);
   };
-
-  // Combined sidebar width for tree layout
-  const treeSidebarWidth = repositoryWidth + worktreeWidth;
 
   return (
     <div className={`flex h-screen overflow-hidden ${resizing ? 'select-none' : ''}`}>
