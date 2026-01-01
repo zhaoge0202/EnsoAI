@@ -107,6 +107,11 @@ class AutoUpdaterService {
   }
 
   private sendStatus(status: UpdateStatus): void {
+    // Once update is downloaded, don't send other status updates
+    // This prevents the update dialog from disappearing due to subsequent checks
+    if (this.updateDownloaded && status.status !== 'downloaded') {
+      return;
+    }
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
       this.mainWindow.webContents.send('updater:status', status);
     }
