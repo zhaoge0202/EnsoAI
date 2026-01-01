@@ -1099,7 +1099,7 @@ export function AgentPanel({ repoPath, cwd, isActive = false, onSwitchWorktree }
                 onSplit={() => groupId && handleSplit(groupId)}
                 canMerge={info ? info.groupIndex > 0 : false}
                 onMerge={() => groupId && handleMerge(groupId)}
-                onFocus={() => groupId && handleGroupClick(groupId)}
+                onFocus={() => groupId && handleSelectSession(sessionId, groupId)}
               />
             </div>
           );

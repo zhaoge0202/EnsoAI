@@ -24,7 +24,7 @@ interface AgentTerminalProps {
   onTerminalTitleChange?: (title: string) => void;
   onSplit?: () => void;
   onMerge?: () => void;
-  onFocus?: () => void;
+  onFocus?: () => void; // called when terminal is clicked/focused to activate the group
 }
 
 const MIN_RUNTIME_FOR_AUTO_CLOSE = 10000; // 10 seconds
@@ -508,10 +508,19 @@ export function AgentTerminal({
     };
   }, []);
 
+  // Handle click to activate group
+  const handleClick = useCallback(() => {
+    if (!isActive) {
+      onFocus?.();
+    }
+  }, [isActive, onFocus]);
+
   return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: click is for focus activation
     <div
       className="relative h-full w-full"
       style={{ backgroundColor: settings.theme.background, contain: 'strict' }}
+      onClick={handleClick}
     >
       <div ref={containerRef} className="h-full w-full px-[5px] py-[2px]" />
       <TerminalSearchBar
