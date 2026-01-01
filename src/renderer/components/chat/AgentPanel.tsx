@@ -264,6 +264,25 @@ export function AgentPanel({ repoPath, cwd, isActive = false, onSwitchWorktree }
     return unsubscribe;
   }, [handleSelectSession, allSessions, cwd, onSwitchWorktree]);
 
+  // 监听 Claude stop hook 通知，发送精确的完成通知
+  useEffect(() => {
+    const unsubscribe = window.electronAPI.notification.onAgentStop(({ sessionId }) => {
+      const session = allSessions.find((s) => s.id === sessionId);
+      if (session) {
+        const projectName = session.cwd.split('/').pop() || 'Unknown';
+        const agentName = AGENT_INFO[session.agentId]?.name || session.agentCommand;
+        // Use terminal title as body, fall back to project name
+        const notificationBody = session.terminalTitle || projectName;
+        window.electronAPI.notification.show({
+          title: t('{{command}} completed', { command: agentName }),
+          body: notificationBody,
+          sessionId,
+        });
+      }
+    });
+    return unsubscribe;
+  }, [allSessions, t]);
+
   // 监听 code review 继续对话请求
   const pendingSessionId = useCodeReviewContinueStore((s) => s.pendingSessionId);
   const clearContinueRequest = useCodeReviewContinueStore((s) => s.clearRequest);
@@ -460,6 +479,7 @@ export function AgentPanel({ repoPath, cwd, isActive = false, onSwitchWorktree }
               onInitialized={() => handleInitialized(session.id)}
               onActivated={() => handleActivated(session.id)}
               onExit={() => handleCloseSession(session.id)}
+              onTerminalTitleChange={(title) => updateSession(session.id, { terminalTitle: title })}
             />
           </div>
         );

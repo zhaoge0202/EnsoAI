@@ -20,6 +20,7 @@ interface AgentTerminalProps {
   onInitialized?: () => void;
   onActivated?: () => void;
   onExit?: () => void;
+  onTerminalTitleChange?: (title: string) => void;
 }
 
 const MIN_RUNTIME_FOR_AUTO_CLOSE = 10000; // 10 seconds
@@ -38,6 +39,7 @@ export function AgentTerminal({
   onInitialized,
   onActivated,
   onExit,
+  onTerminalTitleChange,
 }: AgentTerminalProps) {
   const { t } = useI18n();
   const {
@@ -46,6 +48,7 @@ export function AgentTerminal({
     agentNotificationEnterDelay,
     hapiSettings,
     shellConfig,
+    claudeCodeIntegration,
   } = useSettingsStore();
 
   // Track if hapi is globally installed (cached in main process)
@@ -246,8 +249,13 @@ export function AgentTerminal({
         pendingIdleMonitorRef.current = false;
       }
 
-      // Skip if notification disabled or not waiting for idle
-      if (!agentNotificationEnabled || !isWaitingForIdleRef.current) return;
+      // Skip if notification disabled, not waiting for idle, or Stop hook is enabled (Stop hook is more precise)
+      if (
+        !agentNotificationEnabled ||
+        !isWaitingForIdleRef.current ||
+        claudeCodeIntegration.stopHookEnabled
+      )
+        return;
 
       // Clear existing idle timer
       if (idleTimerRef.current) {
@@ -277,15 +285,20 @@ export function AgentTerminal({
       cwd,
       agentNotificationEnabled,
       agentNotificationDelay,
+      claudeCodeIntegration.stopHookEnabled,
       sessionId,
       t,
     ]
   );
 
   // Handle terminal title changes (OSC escape sequences)
-  const handleTitleChange = useCallback((title: string) => {
-    currentTitleRef.current = title;
-  }, []);
+  const handleTitleChange = useCallback(
+    (title: string) => {
+      currentTitleRef.current = title;
+      onTerminalTitleChange?.(title);
+    },
+    [onTerminalTitleChange]
+  );
 
   // Handle Shift+Enter for newline (Ctrl+J / LF for all agents)
   // Also detect Enter key press to mark session as activated

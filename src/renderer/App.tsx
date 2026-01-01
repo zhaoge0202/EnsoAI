@@ -406,6 +406,11 @@ export default function App() {
     }
   }, [claudeCodeIntegration.enabled, activeWorktree]);
 
+  // Sync Stop hook setting with Claude Code
+  useEffect(() => {
+    window.electronAPI.mcp.setStopHookEnabled(claudeCodeIntegration.stopHookEnabled);
+  }, [claudeCodeIntegration.stopHookEnabled]);
+
   // Sync activeWorktree with loaded worktrees data
   useEffect(() => {
     if (worktrees.length > 0 && activeWorktree) {

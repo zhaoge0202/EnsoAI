@@ -171,12 +171,14 @@ export interface ClaudeCodeIntegrationSettings {
   enabled: boolean;
   selectionChangedDebounce: number; // in milliseconds
   atMentionedKeybinding: TerminalKeybinding;
+  stopHookEnabled: boolean; // Enable Stop hook for precise agent completion notifications
 }
 
 export const defaultClaudeCodeIntegrationSettings: ClaudeCodeIntegrationSettings = {
   enabled: true,
   selectionChangedDebounce: 300,
   atMentionedKeybinding: { key: 'm', meta: true, shift: true }, // Cmd/Ctrl+Shift+M
+  stopHookEnabled: false, // Disabled by default, user opt-in
 };
 
 // Commit message generator settings

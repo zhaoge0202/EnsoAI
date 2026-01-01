@@ -357,6 +357,11 @@ const electronAPI = {
       ipcRenderer.on(IPC_CHANNELS.NOTIFICATION_CLICK, handler);
       return () => ipcRenderer.off(IPC_CHANNELS.NOTIFICATION_CLICK, handler);
     },
+    onAgentStop: (callback: (data: { sessionId: string }) => void): (() => void) => {
+      const handler = (_: unknown, data: { sessionId: string }) => callback(data);
+      ipcRenderer.on(IPC_CHANNELS.AGENT_STOP_NOTIFICATION, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.AGENT_STOP_NOTIFICATION, handler);
+    },
   },
 
   // Updater
@@ -419,6 +424,8 @@ const electronAPI = {
     sendAtMentioned: (params: { filePath: string; lineStart: number; lineEnd: number }): void => {
       ipcRenderer.send(IPC_CHANNELS.MCP_AT_MENTIONED, params);
     },
+    setStopHookEnabled: (enabled: boolean): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.MCP_STOP_HOOK_SET, enabled),
   },
 
   // Search

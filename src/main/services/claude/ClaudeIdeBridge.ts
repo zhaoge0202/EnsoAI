@@ -4,8 +4,9 @@ import * as http from 'node:http';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { IPC_CHANNELS } from '@shared/types';
-import { ipcMain } from 'electron';
+import { BrowserWindow, ipcMain } from 'electron';
 import { type RawData, type WebSocket, WebSocketServer } from 'ws';
+import { ensureStopHook, removeStopHook } from './ClaudeHookManager';
 import { MCP_TOOLS } from './mcpTools';
 
 interface LockFilePayload {
@@ -195,7 +196,38 @@ export async function startClaudeIdeBridge(
   // Mutable state for workspace folders
   let currentWorkspaceFolders = [...initialFolders];
 
-  const httpServer = http.createServer();
+  const httpServer = http.createServer((req, res) => {
+    // Handle POST /agent-stop for Claude stop hook notifications
+    if (req.method === 'POST' && req.url === '/agent-stop') {
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk.toString();
+      });
+      req.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          const sessionId = data.session_id;
+          if (sessionId) {
+            // Broadcast to all windows
+            for (const window of BrowserWindow.getAllWindows()) {
+              if (!window.isDestroyed()) {
+                window.webContents.send(IPC_CHANNELS.AGENT_STOP_NOTIFICATION, { sessionId });
+              }
+            }
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true }));
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+    // WebSocket upgrade handled by ws, other requests get 404
+    res.writeHead(404);
+    res.end();
+  });
   const wss = new WebSocketServer({ server: httpServer });
 
   const jsonRpcHandler = createJsonRpcHandler({ ideName });
@@ -379,6 +411,17 @@ export function setBridgeOptions(options: ClaudeIdeBridgeOptions): void {
   bridgeOptions = { ...bridgeOptions, ...options };
 }
 
+/**
+ * Enable or disable the Stop hook for precise agent completion notifications
+ */
+export function setStopHookEnabled(enabled: boolean): boolean {
+  if (enabled) {
+    return ensureStopHook();
+  } else {
+    return removeStopHook();
+  }
+}
+
 // Register IPC handlers for bridge control
 export function registerClaudeBridgeIpcHandlers(): void {
   ipcMain.handle(
@@ -390,5 +433,9 @@ export function registerClaudeBridgeIpcHandlers(): void {
 
   ipcMain.handle(IPC_CHANNELS.MCP_BRIDGE_GET_STATUS, () => {
     return getClaudeBridgeStatus();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.MCP_STOP_HOOK_SET, (_, enabled: boolean) => {
+    return setStopHookEnabled(enabled);
   });
 }

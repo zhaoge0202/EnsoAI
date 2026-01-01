@@ -532,6 +532,9 @@ export const zhTranslations: Record<string, string> = {
     '发送选区变化到 Claude Code 前的延迟时间',
   'Mention Shortcut': '提及快捷键',
   'Send selected code range to Claude Code': '将选中的代码范围发送到 Claude Code',
+  'Enhanced Notification': '增强通知',
+  'Use Claude Stop hook for precise agent completion notifications':
+    '使用 Claude Stop hook 获取精确的 Agent 完成通知',
   'Sent to Claude Code': '已发送到 Claude Code',
   'Send to Claude': '发送到 Claude',
   lines: '行',

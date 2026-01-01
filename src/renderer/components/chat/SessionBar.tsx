@@ -20,6 +20,7 @@ export interface Session {
   cwd: string; // worktree path this session belongs to
   environment?: 'native' | 'hapi' | 'happy'; // execution environment (default: native)
   displayOrder?: number; // order in SessionBar (lower = first), used for drag reorder
+  terminalTitle?: string; // current terminal title from OSC escape sequence
 }
 
 interface SessionBarProps {

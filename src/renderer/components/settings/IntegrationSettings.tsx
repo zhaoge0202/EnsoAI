@@ -111,6 +111,20 @@ export function IntegrationSettings() {
               </p>
             </div>
           </div>
+
+          {/* Stop Hook (Enhanced Notification) */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <span className="text-sm font-medium">{t('Enhanced Notification')}</span>
+              <p className="text-xs text-muted-foreground">
+                {t('Use Claude Stop hook for precise agent completion notifications')}
+              </p>
+            </div>
+            <Switch
+              checked={claudeCodeIntegration.stopHookEnabled}
+              onCheckedChange={(checked) => setClaudeCodeIntegration({ stopHookEnabled: checked })}
+            />
+          </div>
         </div>
       )}
 

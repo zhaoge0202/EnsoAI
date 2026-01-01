@@ -65,6 +65,7 @@ export const IPC_CHANNELS = {
 
   // Agent
   AGENT_LIST: 'agent:list',
+  AGENT_STOP_NOTIFICATION: 'agent:stop:notification',
 
   // App
   APP_GET_PATH: 'app:getPath',
@@ -120,6 +121,7 @@ export const IPC_CHANNELS = {
   MCP_BRIDGE_GET_STATUS: 'mcp:bridge:getStatus',
   MCP_SELECTION_CHANGED: 'mcp:selection:changed',
   MCP_AT_MENTIONED: 'mcp:at:mentioned',
+  MCP_STOP_HOOK_SET: 'mcp:stopHook:set',
 
   // Search
   SEARCH_FILES: 'search:files',
