@@ -194,56 +194,86 @@ export function useFileTree({ rootPath, enabled = true, isActive = true }: UseFi
   // 递归更新树中某个目录的 children
   const refreshNodeChildren = useCallback(
     async (targetPath: string) => {
-      const newChildren = await window.electronAPI.file.list(targetPath, rootPath);
-      queryClient.setQueryData(['file', 'list', targetPath], newChildren);
+      try {
+        const newChildren = await window.electronAPI.file.list(targetPath, rootPath);
+        queryClient.setQueryData(['file', 'list', targetPath], newChildren);
 
-      setTree((current) => {
-        const updateNode = (nodes: FileTreeNode[]): FileTreeNode[] => {
-          return nodes.map((node) => {
-            if (node.path === targetPath && node.children) {
-              // 合并新数据，保留子目录已加载的 children
-              const mergedChildren = newChildren.map((newChild) => {
-                const oldChild = node.children?.find((o) => o.path === newChild.path);
-                if (oldChild?.children) {
-                  return { ...newChild, children: oldChild.children };
-                }
-                return { ...newChild };
-              });
-              return { ...node, children: mergedChildren as FileTreeNode[] };
+        setTree((current) => {
+          const updateNode = (nodes: FileTreeNode[]): FileTreeNode[] => {
+            return nodes.map((node) => {
+              if (node.path === targetPath && node.children) {
+                // 合并新数据，保留子目录已加载的 children
+                const mergedChildren = newChildren.map((newChild) => {
+                  const oldChild = node.children?.find((o) => o.path === newChild.path);
+                  if (oldChild?.children) {
+                    return { ...newChild, children: oldChild.children };
+                  }
+                  return { ...newChild };
+                });
+                return { ...node, children: mergedChildren as FileTreeNode[] };
+              }
+              if (node.children) {
+                return { ...node, children: updateNode(node.children) };
+              }
+              return node;
+            });
+          };
+          return updateNode(current);
+        });
+      } catch (error) {
+        // Directory was deleted - remove from expanded paths and tree
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          queryClient.removeQueries({ queryKey: ['file', 'list', targetPath] });
+          setExpandedPaths((prev) => {
+            const next = new Set(prev);
+            // Remove this path and all children paths
+            for (const p of prev) {
+              if (p === targetPath || p.startsWith(targetPath + '/')) {
+                next.delete(p);
+              }
             }
-            if (node.children) {
-              return { ...node, children: updateNode(node.children) };
-            }
-            return node;
+            return next;
           });
-        };
-        return updateNode(current);
-      });
+        }
+      }
     },
     [queryClient, rootPath]
   );
 
-  // File watch effect - only watch when active
+  // Track if we need to refresh when becoming active
+  const needsRefreshOnActiveRef = useRef(false);
+
+  // File watch effect - always watch, but only update UI when active
   useEffect(() => {
-    if (!rootPath || !enabled || !isActive) return;
+    if (!rootPath || !enabled) return;
 
     // Start watching
     window.electronAPI.file.watchStart(rootPath);
 
     // Listen for changes
     const unsubscribe = window.electronAPI.file.onChange(async (event) => {
-      // Invalidate the parent directory query
       const parentPath = event.path.substring(0, event.path.lastIndexOf('/')) || rootPath;
 
+      // Always invalidate cache regardless of isActive
+      if (parentPath !== rootPath) {
+        queryClient.removeQueries({ queryKey: ['file', 'list', parentPath] });
+      }
+
+      // If not active, mark for refresh when becoming active
+      if (!isActive) {
+        needsRefreshOnActiveRef.current = true;
+        return;
+      }
+
       if (parentPath === rootPath) {
-        // 根目录变化，让 query 重新获取
-        queryClient.invalidateQueries({ queryKey: ['file', 'list', rootPath] });
+        // Root directory change - refetch immediately
+        await queryClient.refetchQueries({ queryKey: ['file', 'list', rootPath] });
       } else if (expandedPathsRef.current.has(parentPath)) {
-        // 已展开的子目录变化，刷新该目录的 children
+        // Expanded subdirectory change - refresh its children
         await refreshNodeChildren(parentPath);
       }
 
-      // If it's a directory that was expanded, refresh its children
+      // If the changed path itself is an expanded directory, refresh its children
       if (expandedPathsRef.current.has(event.path)) {
         await refreshNodeChildren(event.path);
       }
@@ -292,9 +322,26 @@ export function useFileTree({ rootPath, enabled = true, isActive = true }: UseFi
     [queryClient]
   );
 
-  const refresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['file', 'list'] });
-  }, [queryClient]);
+  const refresh = useCallback(async () => {
+    // Refetch root directory first
+    await queryClient.refetchQueries({ queryKey: ['file', 'list', rootPath] });
+
+    // Refetch all expanded directories to update the tree with fresh data
+    const currentExpanded = Array.from(expandedPathsRef.current);
+    for (const path of currentExpanded) {
+      if (path !== rootPath) {
+        await refreshNodeChildren(path);
+      }
+    }
+  }, [queryClient, rootPath, refreshNodeChildren]);
+
+  // Refresh when becoming active if changes occurred while inactive
+  useEffect(() => {
+    if (isActive && needsRefreshOnActiveRef.current) {
+      needsRefreshOnActiveRef.current = false;
+      refresh();
+    }
+  }, [isActive, refresh]);
 
   return {
     tree,
