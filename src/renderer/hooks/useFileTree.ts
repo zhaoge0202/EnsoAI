@@ -91,16 +91,19 @@ export function useFileTree({ rootPath, enabled = true, isActive = true }: UseFi
         // 折叠时，同时折叠所有被压缩的子目录
         const collectCompactedPaths = (nodes: FileTreeNode[], targetPath: string): string[] => {
           for (const node of nodes) {
-            if (node.path === targetPath && node.isDirectory && node.children) {
+            if (node.path === targetPath && node.isDirectory) {
+              // 始终包含目标路径，即使 children 不存在（加载失败的情况）
               const paths = [targetPath];
-              let current = node;
-              while (
-                current.children?.length === 1 &&
-                current.children[0].isDirectory &&
-                newExpanded.has(current.children[0].path)
-              ) {
-                current = current.children[0];
-                paths.push(current.path);
+              if (node.children) {
+                let current = node;
+                while (
+                  current.children?.length === 1 &&
+                  current.children[0].isDirectory &&
+                  newExpanded.has(current.children[0].path)
+                ) {
+                  current = current.children[0];
+                  paths.push(current.path);
+                }
               }
               return paths;
             }
@@ -109,7 +112,8 @@ export function useFileTree({ rootPath, enabled = true, isActive = true }: UseFi
               if (found.length > 0) return found;
             }
           }
-          return [];
+          // 如果节点未在树中找到（边缘情况），仍删除目标路径
+          return [targetPath];
         };
 
         const pathsToCollapse = collectCompactedPaths(tree, path);
@@ -131,6 +135,18 @@ export function useFileTree({ rootPath, enabled = true, isActive = true }: UseFi
           });
         };
 
+        const clearLoading = (nodes: FileTreeNode[]): FileTreeNode[] => {
+          return nodes.map((node) => {
+            if (node.path === path && node.isLoading) {
+              return { ...node, isLoading: false };
+            }
+            if (node.children) {
+              return { ...node, children: clearLoading(node.children) };
+            }
+            return node;
+          });
+        };
+
         // 检查是否需要加载
         const needsLoad = (nodes: FileTreeNode[]): boolean => {
           for (const node of nodes) {
@@ -146,41 +162,52 @@ export function useFileTree({ rootPath, enabled = true, isActive = true }: UseFi
         if (needsLoad(tree)) {
           setTree((current) => markLoading(current));
 
-          // 加载整个单子目录链
-          const children = await loadChildren(path);
-          const allPaths = [path];
-          const finalChildren = children.map((c) => ({ ...c })) as FileTreeNode[];
+          try {
+            // 加载整个单子目录链
+            const children = await loadChildren(path);
+            const allPaths = [path];
+            const finalChildren = children.map((c) => ({ ...c })) as FileTreeNode[];
 
-          // 如果只有一个子目录，继续加载链
-          if (children.length === 1 && children[0].isDirectory) {
-            const loadChain = async (
-              dirPath: string,
-              nodes: FileTreeNode[]
-            ): Promise<FileTreeNode[]> => {
-              const dirChildren = await loadChildren(dirPath);
-              allPaths.push(dirPath);
+            // 如果只有一个子目录，继续加载链
+            if (children.length === 1 && children[0].isDirectory) {
+              const loadChain = async (
+                dirPath: string,
+                nodes: FileTreeNode[]
+              ): Promise<FileTreeNode[]> => {
+                const dirChildren = await loadChildren(dirPath);
+                allPaths.push(dirPath);
 
-              const childNodes = dirChildren.map((c) => ({ ...c })) as FileTreeNode[];
+                const childNodes = dirChildren.map((c) => ({ ...c })) as FileTreeNode[];
 
-              if (dirChildren.length === 1 && dirChildren[0].isDirectory) {
-                childNodes[0].children = await loadChain(dirChildren[0].path, childNodes);
-              }
+                if (dirChildren.length === 1 && dirChildren[0].isDirectory) {
+                  childNodes[0].children = await loadChain(dirChildren[0].path, childNodes);
+                }
 
-              return childNodes;
-            };
+                return childNodes;
+              };
 
-            finalChildren[0].children = await loadChain(children[0].path, finalChildren);
+              finalChildren[0].children = await loadChain(children[0].path, finalChildren);
+            }
+
+            // 更新展开状态
+            setExpandedPaths((prev) => {
+              const next = new Set(prev);
+              for (const p of allPaths) next.add(p);
+              return next;
+            });
+
+            // 更新树
+            setTree((current) => updateTreeWithChain(current, path, finalChildren));
+          } catch (error) {
+            // 加载失败时回滚状态
+            setExpandedPaths((prev) => {
+              const next = new Set(prev);
+              next.delete(path);
+              return next;
+            });
+            setTree((current) => clearLoading(current));
+            console.error('Failed to load directory children:', error);
           }
-
-          // 更新展开状态
-          setExpandedPaths((prev) => {
-            const next = new Set(prev);
-            for (const p of allPaths) next.add(p);
-            return next;
-          });
-
-          // 更新树
-          setTree((current) => updateTreeWithChain(current, path, finalChildren));
         }
       }
     },
@@ -243,6 +270,10 @@ export function useFileTree({ rootPath, enabled = true, isActive = true }: UseFi
   // Track if we need to refresh when becoming active
   const needsRefreshOnActiveRef = useRef(false);
 
+  // Use ref for isActive to avoid effect re-runs on tab switch
+  const isActiveRef = useRef(isActive);
+  isActiveRef.current = isActive;
+
   // File watch effect - always watch, but only update UI when active
   useEffect(() => {
     if (!rootPath || !enabled) return;
@@ -260,7 +291,7 @@ export function useFileTree({ rootPath, enabled = true, isActive = true }: UseFi
       }
 
       // If not active, mark for refresh when becoming active
-      if (!isActive) {
+      if (!isActiveRef.current) {
         needsRefreshOnActiveRef.current = true;
         return;
       }
@@ -283,7 +314,7 @@ export function useFileTree({ rootPath, enabled = true, isActive = true }: UseFi
       unsubscribe();
       window.electronAPI.file.watchStop(rootPath);
     };
-  }, [rootPath, enabled, isActive, queryClient, refreshNodeChildren]);
+  }, [rootPath, enabled, queryClient, refreshNodeChildren]);
 
   // File operations
   const createFile = useCallback(
