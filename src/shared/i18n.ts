@@ -535,6 +535,7 @@ export const zhTranslations: Record<string, string> = {
   'Before whitespace': '空白字符前',
   // Integration settings
   Integration: '集成',
+  'Claude Integration': 'Claude 集成',
   'Claude Code Integration': 'Claude Code 集成',
   'Connect to Claude Code CLI for enhanced IDE features':
     '连接 Claude Code CLI 以获得增强的 IDE 功能',
