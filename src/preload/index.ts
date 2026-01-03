@@ -20,6 +20,8 @@ import type {
   GitLogEntry,
   GitStatus,
   GitWorktree,
+  McpServer,
+  McpServerConfig,
   MergeConflict,
   MergeConflictContent,
   MergeState,
@@ -363,6 +365,39 @@ const electronAPI = {
       ipcRenderer.on(IPC_CHANNELS.AGENT_STOP_NOTIFICATION, handler);
       return () => ipcRenderer.off(IPC_CHANNELS.AGENT_STOP_NOTIFICATION, handler);
     },
+    onAgentStatusUpdate: (
+      callback: (data: {
+        sessionId: string;
+        model?: { id: string; display_name: string };
+        contextWindow?: {
+          total_input_tokens: number;
+          total_output_tokens: number;
+          context_window_size: number;
+          current_usage?: {
+            input_tokens: number;
+            output_tokens: number;
+            cache_creation_input_tokens: number;
+            cache_read_input_tokens: number;
+          };
+        };
+        cost?: {
+          total_cost_usd: number;
+          total_duration_ms: number;
+          total_api_duration_ms?: number;
+          total_lines_added: number;
+          total_lines_removed: number;
+        };
+        workspace?: {
+          current_dir: string;
+          project_dir: string;
+        };
+        version?: string;
+      }) => void
+    ): (() => void) => {
+      const handler = (_: unknown, data: Parameters<typeof callback>[0]) => callback(data);
+      ipcRenderer.on(IPC_CHANNELS.AGENT_STATUS_UPDATE, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.AGENT_STATUS_UPDATE, handler);
+    },
   },
 
   // Updater
@@ -427,6 +462,10 @@ const electronAPI = {
     },
     setStopHookEnabled: (enabled: boolean): Promise<boolean> =>
       ipcRenderer.invoke(IPC_CHANNELS.MCP_STOP_HOOK_SET, enabled),
+    setStatusLineHookEnabled: (enabled: boolean): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.MCP_STATUSLINE_HOOK_SET, enabled),
+    getStatusLineHookStatus: (): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.MCP_STATUSLINE_HOOK_STATUS),
   },
 
   // Claude Provider
@@ -437,6 +476,51 @@ const electronAPI = {
     }> => ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_PROVIDER_READ_SETTINGS),
     apply: (provider: import('@shared/types').ClaudeProvider): Promise<boolean> =>
       ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_PROVIDER_APPLY, provider),
+  },
+
+  // Claude Config (MCP, Prompts, Plugins)
+  claudeConfig: {
+    // MCP Management
+    mcp: {
+      read: (): Promise<Record<string, McpServerConfig>> =>
+        ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_MCP_READ),
+      sync: (servers: McpServer[]): Promise<boolean> =>
+        ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_MCP_SYNC, servers),
+      upsert: (server: McpServer): Promise<boolean> =>
+        ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_MCP_UPSERT, server),
+      delete: (serverId: string): Promise<boolean> =>
+        ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_MCP_DELETE, serverId),
+    },
+    // Prompts Management
+    prompts: {
+      read: (): Promise<string | null> => ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_PROMPTS_READ),
+      write: (content: string): Promise<boolean> =>
+        ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_PROMPTS_WRITE, content),
+      backup: (): Promise<string | null> => ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_PROMPTS_BACKUP),
+    },
+    // Plugins Management
+    plugins: {
+      list: (): Promise<import('@shared/types').Plugin[]> =>
+        ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_PLUGINS_LIST),
+      setEnabled: (pluginId: string, enabled: boolean): Promise<boolean> =>
+        ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_PLUGINS_SET_ENABLED, pluginId, enabled),
+      available: (marketplace?: string): Promise<import('@shared/types').AvailablePlugin[]> =>
+        ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_PLUGINS_AVAILABLE, marketplace),
+      install: (pluginName: string, marketplace?: string): Promise<boolean> =>
+        ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_PLUGINS_INSTALL, pluginName, marketplace),
+      uninstall: (pluginId: string): Promise<boolean> =>
+        ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_PLUGINS_UNINSTALL, pluginId),
+      marketplaces: {
+        list: (): Promise<import('@shared/types').PluginMarketplace[]> =>
+          ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_PLUGINS_MARKETPLACES_LIST),
+        add: (repo: string): Promise<boolean> =>
+          ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_PLUGINS_MARKETPLACES_ADD, repo),
+        remove: (name: string): Promise<boolean> =>
+          ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_PLUGINS_MARKETPLACES_REMOVE, name),
+        refresh: (name?: string): Promise<boolean> =>
+          ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_PLUGINS_MARKETPLACES_REFRESH, name),
+      },
+    },
   },
 
   // Search

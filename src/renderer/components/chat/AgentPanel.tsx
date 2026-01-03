@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button';
 import { useI18n } from '@/i18n';
 import { matchesKeybinding } from '@/lib/keybinding';
 import { useAgentSessionsStore } from '@/stores/agentSessions';
+import { initAgentStatusListener } from '@/stores/agentStatus';
 import { useCodeReviewContinueStore } from '@/stores/codeReviewContinue';
 import { BUILTIN_AGENT_IDS, useSettingsStore } from '@/stores/settings';
 import { useWorktreeActivityStore } from '@/stores/worktreeActivity';
 import { AgentGroup } from './AgentGroup';
 import { AgentTerminal } from './AgentTerminal';
 import type { Session } from './SessionBar';
+import { StatusLine } from './StatusLine';
 import type { AgentGroupState, AgentGroup as AgentGroupType } from './types';
 import { createInitialGroupState } from './types';
 
@@ -114,6 +116,9 @@ export function AgentPanel({ repoPath, cwd, isActive = false, onSwitchWorktree }
 
   // Global session IDs to keep terminals mounted across group moves
   const [globalSessionIds, setGlobalSessionIds] = useState<Set<string>>(new Set());
+
+  // StatusLine height for terminal container positioning
+  const [statusLineHeight, setStatusLineHeight] = useState(0);
 
   // Use zustand store for sessions and group states - state persists even when component unmounts
   const allSessions = useAgentSessionsStore((state) => state.sessions);
@@ -399,6 +404,12 @@ export function AgentPanel({ repoPath, cwd, isActive = false, onSwitchWorktree }
     });
     return unsubscribe;
   }, [allSessions, t]);
+
+  // 监听 Claude status line 更新
+  useEffect(() => {
+    const unsubscribe = initAgentStatusListener();
+    return unsubscribe;
+  }, []);
 
   // 监听 code review 继续对话请求
   const pendingSessionId = useCodeReviewContinueStore((s) => s.pendingSessionId);
@@ -1046,7 +1057,8 @@ export function AgentPanel({ repoPath, cwd, isActive = false, onSwitchWorktree }
       {/* All terminals - rendered in a SINGLE container with stable sessionId keys */}
       {/* This container is NOT inside any worktree-specific wrapper, ensuring stable mounting */}
       {/* All sessions across ALL repos are rendered here to keep them mounted */}
-      <div className="absolute inset-0 z-0">
+      {/* bottom is dynamically set based on StatusLine height */}
+      <div className="absolute top-0 left-0 right-0 z-0" style={{ bottom: statusLineHeight }}>
         {Array.from(globalSessionIds).map((sessionId) => {
           const session = allSessions.find((s) => s.id === sessionId);
           if (!session) return null;
@@ -1134,7 +1146,7 @@ export function AgentPanel({ repoPath, cwd, isActive = false, onSwitchWorktree }
         return (
           <div
             key={`group-ui-${group.id}`}
-            className="absolute top-0 bottom-0 z-10 pointer-events-none overflow-hidden"
+            className="absolute top-0 bottom-0 z-10 pointer-events-none overflow-hidden flex flex-col"
             style={{
               left: `${position.left}%`,
               width: `${position.width}%`,
@@ -1157,6 +1169,10 @@ export function AgentPanel({ repoPath, cwd, isActive = false, onSwitchWorktree }
               onSessionReorder={(from, to) => handleReorderSessions(group.id, from, to)}
               onGroupClick={() => handleGroupClick(group.id)}
             />
+            {/* Status Line at bottom of each group */}
+            <div className="mt-auto pointer-events-auto">
+              <StatusLine sessionId={group.activeSessionId} onHeightChange={setStatusLineHeight} />
+            </div>
           </div>
         );
       })}

@@ -1,8 +1,9 @@
 import { disposeClaudeIdeBridge } from '../services/claude/ClaudeIdeBridge';
 import { registerAgentHandlers } from './agent';
 import { registerAppHandlers } from './app';
-import { registerCliHandlers } from './cli';
+import { registerClaudeConfigHandlers } from './claudeConfig';
 import { registerClaudeProviderHandlers } from './claudeProvider';
+import { registerCliHandlers } from './cli';
 import { registerDialogHandlers } from './dialog';
 import { registerFileHandlers, stopAllFileWatchers, stopAllFileWatchersSync } from './files';
 import { clearAllGitServices, registerGitHandlers } from './git';
@@ -38,6 +39,7 @@ export function registerIpcHandlers(): void {
   registerSearchHandlers();
   registerHapiHandlers();
   registerClaudeProviderHandlers();
+  registerClaudeConfigHandlers();
 }
 
 export async function cleanupAllResources(): Promise<void> {

@@ -10,8 +10,11 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useI18n } from '@/i18n';
 import { useSettingsStore } from '@/stores/settings';
-import { KeybindingInput } from './KeybindingsSettings';
 import { ProviderList } from './claude-provider';
+import { KeybindingInput } from './KeybindingsSettings';
+import { McpSection } from './mcp';
+import { PluginsSection } from './plugins';
+import { PromptsSection } from './prompts';
 
 export function IntegrationSettings() {
   const { t } = useI18n();
@@ -127,6 +130,209 @@ export function IntegrationSettings() {
             />
           </div>
 
+          {/* Status Line */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <span className="text-sm font-medium">{t('Status Line')}</span>
+              <p className="text-xs text-muted-foreground">
+                {t('Show agent status (model, context, cost) at bottom of terminal')}
+              </p>
+            </div>
+            <Switch
+              checked={claudeCodeIntegration.statusLineEnabled}
+              onCheckedChange={(checked) =>
+                setClaudeCodeIntegration({ statusLineEnabled: checked })
+              }
+            />
+          </div>
+
+          {/* Status Line Fields */}
+          {claudeCodeIntegration.statusLineEnabled && (
+            <div className="ml-4 space-y-2 border-l-2 border-muted pl-4">
+              <span className="text-xs font-medium text-muted-foreground">
+                {t('Display Fields')}
+              </span>
+              <div className="flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={claudeCodeIntegration.statusLineFields?.model ?? true}
+                    onChange={(e) =>
+                      setClaudeCodeIntegration({
+                        statusLineFields: {
+                          ...claudeCodeIntegration.statusLineFields,
+                          model: e.target.checked,
+                        },
+                      })
+                    }
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  {t('Model')}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={claudeCodeIntegration.statusLineFields?.context ?? true}
+                    onChange={(e) =>
+                      setClaudeCodeIntegration({
+                        statusLineFields: {
+                          ...claudeCodeIntegration.statusLineFields,
+                          context: e.target.checked,
+                        },
+                      })
+                    }
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  {t('Context')}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={claudeCodeIntegration.statusLineFields?.cost ?? true}
+                    onChange={(e) =>
+                      setClaudeCodeIntegration({
+                        statusLineFields: {
+                          ...claudeCodeIntegration.statusLineFields,
+                          cost: e.target.checked,
+                        },
+                      })
+                    }
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  {t('Cost')}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={claudeCodeIntegration.statusLineFields?.duration ?? false}
+                    onChange={(e) =>
+                      setClaudeCodeIntegration({
+                        statusLineFields: {
+                          ...claudeCodeIntegration.statusLineFields,
+                          duration: e.target.checked,
+                        },
+                      })
+                    }
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  {t('Duration')}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={claudeCodeIntegration.statusLineFields?.lines ?? false}
+                    onChange={(e) =>
+                      setClaudeCodeIntegration({
+                        statusLineFields: {
+                          ...claudeCodeIntegration.statusLineFields,
+                          lines: e.target.checked,
+                        },
+                      })
+                    }
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  {t('Lines Changed')}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={claudeCodeIntegration.statusLineFields?.tokens ?? false}
+                    onChange={(e) =>
+                      setClaudeCodeIntegration({
+                        statusLineFields: {
+                          ...claudeCodeIntegration.statusLineFields,
+                          tokens: e.target.checked,
+                        },
+                      })
+                    }
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  {t('Tokens')}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={claudeCodeIntegration.statusLineFields?.cache ?? false}
+                    onChange={(e) =>
+                      setClaudeCodeIntegration({
+                        statusLineFields: {
+                          ...claudeCodeIntegration.statusLineFields,
+                          cache: e.target.checked,
+                        },
+                      })
+                    }
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  {t('Cache')}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={claudeCodeIntegration.statusLineFields?.apiTime ?? false}
+                    onChange={(e) =>
+                      setClaudeCodeIntegration({
+                        statusLineFields: {
+                          ...claudeCodeIntegration.statusLineFields,
+                          apiTime: e.target.checked,
+                        },
+                      })
+                    }
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  {t('API Time')}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={claudeCodeIntegration.statusLineFields?.currentDir ?? false}
+                    onChange={(e) =>
+                      setClaudeCodeIntegration({
+                        statusLineFields: {
+                          ...claudeCodeIntegration.statusLineFields,
+                          currentDir: e.target.checked,
+                        },
+                      })
+                    }
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  {t('Current Dir')}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={claudeCodeIntegration.statusLineFields?.projectDir ?? false}
+                    onChange={(e) =>
+                      setClaudeCodeIntegration({
+                        statusLineFields: {
+                          ...claudeCodeIntegration.statusLineFields,
+                          projectDir: e.target.checked,
+                        },
+                      })
+                    }
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  {t('Project Dir')}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={claudeCodeIntegration.statusLineFields?.version ?? false}
+                    onChange={(e) =>
+                      setClaudeCodeIntegration({
+                        statusLineFields: {
+                          ...claudeCodeIntegration.statusLineFields,
+                          version: e.target.checked,
+                        },
+                      })
+                    }
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  {t('Version')}
+                </label>
+              </div>
+            </div>
+          )}
+
           {/* Claude Provider */}
           <div className="mt-4 border-t pt-4">
             <div className="mb-3">
@@ -137,6 +343,15 @@ export function IntegrationSettings() {
             </div>
             <ProviderList />
           </div>
+
+          {/* MCP Servers */}
+          <McpSection />
+
+          {/* Plugins */}
+          <PluginsSection />
+
+          {/* Prompts */}
+          <PromptsSection />
         </div>
       )}
 

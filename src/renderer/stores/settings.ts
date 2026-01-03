@@ -1,6 +1,13 @@
 import type { Locale } from '@shared/i18n';
 import { normalizeLocale } from '@shared/i18n';
-import type { BuiltinAgentId, CustomAgent, ProxySettings, ShellConfig } from '@shared/types';
+import type {
+  BuiltinAgentId,
+  CustomAgent,
+  McpServer,
+  PromptPreset,
+  ProxySettings,
+  ShellConfig,
+} from '@shared/types';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import {
@@ -166,12 +173,43 @@ export interface SearchKeybindings {
   searchContent: TerminalKeybinding;
 }
 
+// Status Line display field settings
+export interface StatusLineFieldSettings {
+  model: boolean;
+  context: boolean;
+  cost: boolean;
+  duration: boolean;
+  lines: boolean;
+  tokens: boolean; // Input/Output tokens
+  cache: boolean; // Cache hit tokens
+  apiTime: boolean; // API duration vs total duration
+  currentDir: boolean; // Current working directory
+  projectDir: boolean; // Project directory
+  version: boolean; // Claude version
+}
+
+export const defaultStatusLineFieldSettings: StatusLineFieldSettings = {
+  model: true,
+  context: true,
+  cost: true,
+  duration: false,
+  lines: false,
+  tokens: false,
+  cache: false,
+  apiTime: false,
+  currentDir: false,
+  projectDir: false,
+  version: false,
+};
+
 // Claude Code integration settings
 export interface ClaudeCodeIntegrationSettings {
   enabled: boolean;
   selectionChangedDebounce: number; // in milliseconds
   atMentionedKeybinding: TerminalKeybinding;
   stopHookEnabled: boolean; // Enable Stop hook for precise agent completion notifications
+  statusLineEnabled: boolean; // Enable Status Line hook for displaying agent status
+  statusLineFields: StatusLineFieldSettings; // Which fields to display in status line
   providers: import('@shared/types').ClaudeProvider[];
 }
 
@@ -180,6 +218,8 @@ export const defaultClaudeCodeIntegrationSettings: ClaudeCodeIntegrationSettings
   selectionChangedDebounce: 300,
   atMentionedKeybinding: { key: 'm', meta: true, shift: true }, // Cmd/Ctrl+Shift+M
   stopHookEnabled: true, // Enable Stop hook for precise agent completion notifications
+  statusLineEnabled: false, // Disable Status Line hook by default
+  statusLineFields: defaultStatusLineFieldSettings,
   providers: [],
 };
 
@@ -406,6 +446,9 @@ interface SettingsState {
   defaultWorktreePath: string; // Default path for creating worktrees
   proxySettings: ProxySettings;
   autoCreateSessionOnActivate: boolean; // Auto-create agent/terminal session when worktree becomes active
+  // MCP, Prompts management
+  mcpServers: McpServer[];
+  promptPresets: PromptPreset[];
 
   setTheme: (theme: Theme) => void;
   setLayoutMode: (mode: LayoutMode) => void;
@@ -442,7 +485,10 @@ interface SettingsState {
   setAgentNotificationEnterDelay: (delay: number) => void;
   setClaudeCodeIntegration: (settings: Partial<ClaudeCodeIntegrationSettings>) => void;
   addClaudeProvider: (provider: import('@shared/types').ClaudeProvider) => void;
-  updateClaudeProvider: (id: string, updates: Partial<import('@shared/types').ClaudeProvider>) => void;
+  updateClaudeProvider: (
+    id: string,
+    updates: Partial<import('@shared/types').ClaudeProvider>
+  ) => void;
   removeClaudeProvider: (id: string) => void;
   setCommitMessageGenerator: (settings: Partial<CommitMessageGeneratorSettings>) => void;
   setCodeReview: (settings: Partial<CodeReviewSettings>) => void;
@@ -451,6 +497,16 @@ interface SettingsState {
   setDefaultWorktreePath: (path: string) => void;
   setProxySettings: (settings: Partial<ProxySettings>) => void;
   setAutoCreateSessionOnActivate: (enabled: boolean) => void;
+  // MCP management
+  addMcpServer: (server: McpServer) => void;
+  updateMcpServer: (id: string, updates: Partial<McpServer>) => void;
+  removeMcpServer: (id: string) => void;
+  setMcpServerEnabled: (id: string, enabled: boolean) => void;
+  // Prompts management
+  addPromptPreset: (preset: PromptPreset) => void;
+  updatePromptPreset: (id: string, updates: Partial<PromptPreset>) => void;
+  removePromptPreset: (id: string) => void;
+  setPromptPresetEnabled: (id: string) => void;
 }
 
 const defaultAgentSettings: AgentSettings = {
@@ -506,6 +562,9 @@ export const useSettingsStore = create<SettingsState>()(
       defaultWorktreePath: '', // Empty means use default ~/ensoai/workspaces
       proxySettings: defaultProxySettings,
       autoCreateSessionOnActivate: false, // Default: don't auto-create sessions
+      // MCP, Prompts defaults
+      mcpServers: [],
+      promptPresets: [],
 
       setTheme: (theme) => {
         const terminalTheme = get().terminalTheme;
@@ -692,6 +751,49 @@ export const useSettingsStore = create<SettingsState>()(
       },
       setAutoCreateSessionOnActivate: (autoCreateSessionOnActivate) =>
         set({ autoCreateSessionOnActivate }),
+      // MCP management
+      addMcpServer: (server) =>
+        set((state) => ({
+          mcpServers: [...state.mcpServers, server],
+        })),
+      updateMcpServer: (id, updates) =>
+        set((state) => ({
+          mcpServers: state.mcpServers.map((s) =>
+            s.id === id ? ({ ...s, ...updates } as McpServer) : s
+          ),
+        })),
+      removeMcpServer: (id) =>
+        set((state) => ({
+          mcpServers: state.mcpServers.filter((s) => s.id !== id),
+        })),
+      setMcpServerEnabled: (id, enabled) =>
+        set((state) => ({
+          mcpServers: state.mcpServers.map((s) =>
+            s.id === id ? ({ ...s, enabled } as McpServer) : s
+          ),
+        })),
+      // Prompts management
+      addPromptPreset: (preset) =>
+        set((state) => ({
+          promptPresets: [...state.promptPresets, preset],
+        })),
+      updatePromptPreset: (id, updates) =>
+        set((state) => ({
+          promptPresets: state.promptPresets.map((p) =>
+            p.id === id ? { ...p, ...updates, updatedAt: Date.now() } : p
+          ),
+        })),
+      removePromptPreset: (id) =>
+        set((state) => ({
+          promptPresets: state.promptPresets.filter((p) => p.id !== id),
+        })),
+      setPromptPresetEnabled: (id) =>
+        set((state) => ({
+          promptPresets: state.promptPresets.map((p) => ({
+            ...p,
+            enabled: p.id === id,
+          })),
+        })),
     }),
     {
       name: 'enso-settings',
@@ -740,6 +842,10 @@ export const useSettingsStore = create<SettingsState>()(
           claudeCodeIntegration: {
             ...currentState.claudeCodeIntegration,
             ...persisted.claudeCodeIntegration,
+            statusLineFields: {
+              ...currentState.claudeCodeIntegration.statusLineFields,
+              ...persisted.claudeCodeIntegration?.statusLineFields,
+            },
           },
           commitMessageGenerator: {
             ...currentState.commitMessageGenerator,
@@ -764,6 +870,9 @@ export const useSettingsStore = create<SettingsState>()(
               return agentConfig?.enabled;
             })
           ),
+          // MCP, Prompts - use persisted or defaults
+          mcpServers: persisted.mcpServers ?? currentState.mcpServers,
+          promptPresets: persisted.promptPresets ?? currentState.promptPresets,
         };
       },
       onRehydrateStorage: () => (state) => {

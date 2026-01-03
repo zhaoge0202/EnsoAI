@@ -66,6 +66,7 @@ export const IPC_CHANNELS = {
   // Agent
   AGENT_LIST: 'agent:list',
   AGENT_STOP_NOTIFICATION: 'agent:stop:notification',
+  AGENT_STATUS_UPDATE: 'agent:status:update',
 
   // App
   APP_GET_PATH: 'app:getPath',
@@ -122,10 +123,34 @@ export const IPC_CHANNELS = {
   MCP_SELECTION_CHANGED: 'mcp:selection:changed',
   MCP_AT_MENTIONED: 'mcp:at:mentioned',
   MCP_STOP_HOOK_SET: 'mcp:stopHook:set',
+  MCP_STATUSLINE_HOOK_SET: 'mcp:statusLineHook:set',
+  MCP_STATUSLINE_HOOK_STATUS: 'mcp:statusLineHook:status',
 
   // Claude Provider
   CLAUDE_PROVIDER_READ_SETTINGS: 'claude:provider:readSettings',
   CLAUDE_PROVIDER_APPLY: 'claude:provider:apply',
+
+  // Claude MCP Management
+  CLAUDE_MCP_READ: 'claude:mcp:read',
+  CLAUDE_MCP_SYNC: 'claude:mcp:sync',
+  CLAUDE_MCP_UPSERT: 'claude:mcp:upsert',
+  CLAUDE_MCP_DELETE: 'claude:mcp:delete',
+
+  // Claude Prompts Management
+  CLAUDE_PROMPTS_READ: 'claude:prompts:read',
+  CLAUDE_PROMPTS_WRITE: 'claude:prompts:write',
+  CLAUDE_PROMPTS_BACKUP: 'claude:prompts:backup',
+
+  // Claude Plugins Management
+  CLAUDE_PLUGINS_LIST: 'claude:plugins:list',
+  CLAUDE_PLUGINS_SET_ENABLED: 'claude:plugins:setEnabled',
+  CLAUDE_PLUGINS_AVAILABLE: 'claude:plugins:available',
+  CLAUDE_PLUGINS_INSTALL: 'claude:plugins:install',
+  CLAUDE_PLUGINS_UNINSTALL: 'claude:plugins:uninstall',
+  CLAUDE_PLUGINS_MARKETPLACES_LIST: 'claude:plugins:marketplaces:list',
+  CLAUDE_PLUGINS_MARKETPLACES_ADD: 'claude:plugins:marketplaces:add',
+  CLAUDE_PLUGINS_MARKETPLACES_REMOVE: 'claude:plugins:marketplaces:remove',
+  CLAUDE_PLUGINS_MARKETPLACES_REFRESH: 'claude:plugins:marketplaces:refresh',
 
   // Search
   SEARCH_FILES: 'search:files',

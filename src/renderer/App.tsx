@@ -411,6 +411,11 @@ export default function App() {
     window.electronAPI.mcp.setStopHookEnabled(claudeCodeIntegration.stopHookEnabled);
   }, [claudeCodeIntegration.stopHookEnabled]);
 
+  // Sync Status Line hook setting with Claude Code
+  useEffect(() => {
+    window.electronAPI.mcp.setStatusLineHookEnabled(claudeCodeIntegration.statusLineEnabled);
+  }, [claudeCodeIntegration.statusLineEnabled]);
+
   // Sync activeWorktree with loaded worktrees data
   useEffect(() => {
     if (worktrees.length > 0 && activeWorktree) {

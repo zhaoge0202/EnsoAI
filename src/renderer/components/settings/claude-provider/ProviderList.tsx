@@ -111,7 +111,9 @@ export function ProviderList({ className }: ProviderListProps) {
                 tabIndex={isActive ? -1 : 0}
                 className={cn(
                   'group flex items-center justify-between rounded-md px-3 py-2 transition-colors',
-                  isActive ? 'bg-accent' : 'cursor-pointer hover:bg-accent/50'
+                  isActive
+                    ? 'bg-accent text-accent-foreground'
+                    : 'cursor-pointer hover:bg-accent/50'
                 )}
                 onClick={() => !isActive && handleSwitch(provider)}
                 onKeyDown={(e) => {
@@ -123,7 +125,7 @@ export function ProviderList({ className }: ProviderListProps) {
               >
                 <div className="flex items-center gap-2">
                   {isActive ? (
-                    <CheckCircle className="h-4 w-4 text-primary" />
+                    <CheckCircle className="h-4 w-4" />
                   ) : (
                     <Circle className="h-4 w-4 text-muted-foreground" />
                   )}

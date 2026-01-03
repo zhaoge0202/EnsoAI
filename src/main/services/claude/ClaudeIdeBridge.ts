@@ -6,7 +6,14 @@ import * as path from 'node:path';
 import { IPC_CHANNELS } from '@shared/types';
 import { BrowserWindow, ipcMain } from 'electron';
 import { type RawData, type WebSocket, WebSocketServer } from 'ws';
-import { ensureStopHook, isClaudeInstalled, removeStopHook } from './ClaudeHookManager';
+import {
+  ensureStatusLineHook,
+  ensureStopHook,
+  isClaudeInstalled,
+  isStatusLineHookInstalled,
+  removeStatusLineHook,
+  removeStopHook,
+} from './ClaudeHookManager';
 import { MCP_TOOLS } from './mcpTools';
 
 interface LockFilePayload {
@@ -224,6 +231,40 @@ export async function startClaudeIdeBridge(
       });
       return;
     }
+
+    // Handle POST /status-line for Claude status line updates
+    if (req.method === 'POST' && req.url === '/status-line') {
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk.toString();
+      });
+      req.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          const sessionId = data.session_id;
+          if (sessionId) {
+            // Broadcast status update to all windows
+            for (const window of BrowserWindow.getAllWindows()) {
+              if (!window.isDestroyed()) {
+                window.webContents.send(IPC_CHANNELS.AGENT_STATUS_UPDATE, {
+                  sessionId,
+                  model: data.model,
+                  contextWindow: data.context_window,
+                  cost: data.cost,
+                  workspace: data.workspace,
+                });
+              }
+            }
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true }));
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
     // WebSocket upgrade handled by ws, other requests get 404
     res.writeHead(404);
     res.end();
@@ -428,6 +469,17 @@ export function setStopHookEnabled(enabled: boolean): boolean {
   }
 }
 
+/**
+ * Enable or disable the Status Line hook for displaying agent status
+ */
+export function setStatusLineHookEnabled(enabled: boolean): boolean {
+  if (enabled) {
+    return ensureStatusLineHook();
+  } else {
+    return removeStatusLineHook();
+  }
+}
+
 // Register IPC handlers for bridge control
 export function registerClaudeBridgeIpcHandlers(): void {
   ipcMain.handle(
@@ -443,5 +495,13 @@ export function registerClaudeBridgeIpcHandlers(): void {
 
   ipcMain.handle(IPC_CHANNELS.MCP_STOP_HOOK_SET, (_, enabled: boolean) => {
     return setStopHookEnabled(enabled);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.MCP_STATUSLINE_HOOK_SET, (_, enabled: boolean) => {
+    return setStatusLineHookEnabled(enabled);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.MCP_STATUSLINE_HOOK_STATUS, () => {
+    return isStatusLineHookInstalled();
   });
 }
