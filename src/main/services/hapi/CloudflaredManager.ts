@@ -5,6 +5,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { install, Tunnel, use } from 'cloudflared';
 import { app } from 'electron';
+import { killProcessTree } from '../../utils/processUtils';
 
 const execFileAsync = promisify(execFile);
 
@@ -200,10 +201,7 @@ class CloudflaredManager extends EventEmitter {
   }
 
   async stop(): Promise<CloudflaredStatus> {
-    if (this.tunnel) {
-      this.tunnel.stop();
-      this.tunnel = null;
-    }
+    this.killTunnel();
 
     const check = await this.checkInstalled();
     this.status = {
@@ -220,10 +218,20 @@ class CloudflaredManager extends EventEmitter {
   }
 
   cleanup(): void {
-    if (this.tunnel) {
+    this.killTunnel();
+  }
+
+  private killTunnel(): void {
+    if (!this.tunnel) return;
+
+    // Access the underlying child process for proper tree kill
+    const proc = (this.tunnel as { process?: { pid?: number } }).process;
+    if (proc?.pid) {
+      killProcessTree(proc.pid);
+    } else {
       this.tunnel.stop();
-      this.tunnel = null;
     }
+    this.tunnel = null;
   }
 }
 

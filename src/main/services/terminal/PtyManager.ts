@@ -1,9 +1,10 @@
-import { exec, execSync } from 'node:child_process';
+import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import type { TerminalCreateOptions } from '@shared/types';
 import * as pty from 'node-pty';
+import { killProcessTree } from '../../utils/processUtils';
 import { getProxyEnvVars } from '../proxy/ProxyConfig';
 import { detectShell, shellDetector } from './ShellDetector';
 
@@ -365,17 +366,7 @@ export class PtyManager {
   destroy(id: string): void {
     const session = this.sessions.get(id);
     if (session) {
-      const pid = session.pty.pid;
-
-      if (isWindows && pid) {
-        // On Windows, use taskkill to kill the entire process tree
-        exec(`taskkill /F /T /PID ${pid}`, () => {
-          // Ignore errors - process may already be dead
-        });
-      } else {
-        session.pty.kill();
-      }
-
+      killProcessTree(session.pty);
       this.sessions.delete(id);
     }
   }
@@ -419,12 +410,8 @@ export class PtyManager {
       // Note: node-pty's onExit is already set, but we've updated session.onExit
       // The existing onExit handler in create() will call session.onExit
 
-      // Kill the process
-      if (isWindows && pid) {
-        exec(`taskkill /F /T /PID ${pid}`, () => {});
-      } else {
-        session.pty.kill();
-      }
+      // Kill the process tree
+      killProcessTree(session.pty);
     });
   }
 

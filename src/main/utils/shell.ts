@@ -3,39 +3,15 @@
  * Reads user's shell config from settings and provides consistent environment.
  */
 
-import { exec } from 'node:child_process';
 import type { ShellConfig } from '@shared/types';
 import * as pty from 'node-pty';
 import { readSettings } from '../ipc/settings';
 import { findLoginShell, getEnhancedPath } from '../services/terminal/PtyManager';
 import { shellDetector } from '../services/terminal/ShellDetector';
+import { killProcessTree } from './processUtils';
 
-const isWindows = process.platform === 'win32';
-
-/**
- * Kill a process and all its children (process tree).
- * On Windows: uses taskkill /T to kill the process tree.
- * On Unix: kills the process group using negative PID.
- */
-function killProcessTree(pid: number, ptyProcess: pty.IPty): void {
-  try {
-    if (isWindows) {
-      // Windows: use taskkill with /T flag to kill child processes
-      exec(`taskkill /F /T /PID ${pid}`, () => {});
-    } else {
-      // Unix: try to kill the process group first, then the process itself
-      try {
-        process.kill(-pid, 'SIGKILL');
-      } catch {
-        // If process group kill fails, fall back to regular kill
-        ptyProcess.kill();
-      }
-    }
-  } catch {
-    // Ignore errors - process may have already exited
-    ptyProcess.kill();
-  }
-}
+// Re-export for convenience
+export { killProcessTree } from './processUtils';
 
 /**
  * Strip ANSI escape codes from terminal output
@@ -122,9 +98,8 @@ export async function execInPty(command: string, options: ExecInPtyOptions = {})
     const timeoutId = setTimeout(() => {
       if (!hasExited && ptyProcess) {
         hasExited = true;
-        const pid = ptyProcess.pid;
         // Kill entire process tree to ensure child processes are also terminated
-        killProcessTree(pid, ptyProcess);
+        killProcessTree(ptyProcess);
         const cleaned = stripAnsi(output).trim();
         if (killOnTimeout) {
           // When killOnTimeout is true, always resolve with collected output (even if empty)

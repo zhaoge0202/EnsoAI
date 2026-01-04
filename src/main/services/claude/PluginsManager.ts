@@ -2,86 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import type { AvailablePlugin, InstalledPlugin, Plugin, PluginMarketplace } from '@shared/types';
-import * as pty from 'node-pty';
-import { getEnvForCommand, getShellForCommand } from '../../utils/shell';
-
-/**
- * Strip ANSI escape codes from terminal output
- */
-function stripAnsi(str: string): string {
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape sequence is intentional
-  return str.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '');
-}
-
-/**
- * Execute command in PTY to load user's environment (PATH, nvm, mise, volta, etc.)
- * Uses the same mechanism as terminal sessions to ensure consistent behavior.
- */
-async function execInPty(command: string, timeout = 60000): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const { shell, args } = getShellForCommand();
-    const shellName = shell.toLowerCase();
-
-    let shellArgs: string[];
-
-    if (shellName.includes('wsl')) {
-      const escapedCommand = command.replace(/"/g, '\\"');
-      shellArgs = ['-e', 'sh', '-lc', `exec "$SHELL" -ilc "${escapedCommand}"`];
-    } else if (shellName.includes('powershell') || shellName.includes('pwsh')) {
-      shellArgs = [...args, `& { ${command}; exit $LASTEXITCODE }`];
-    } else if (shellName.includes('cmd')) {
-      shellArgs = [...args, `${command} & exit %ERRORLEVEL%`];
-    } else {
-      shellArgs = [...args, `${command}; exit $?`];
-    }
-
-    let output = '';
-    let hasExited = false;
-    let ptyProcess: pty.IPty | null = null;
-
-    const timeoutId = setTimeout(() => {
-      if (!hasExited && ptyProcess) {
-        hasExited = true;
-        ptyProcess.kill();
-        reject(new Error('Command timeout'));
-      }
-    }, timeout);
-
-    try {
-      ptyProcess = pty.spawn(shell, shellArgs, {
-        name: 'xterm-256color',
-        cols: 80,
-        rows: 24,
-        cwd: process.env.HOME || process.env.USERPROFILE || '/',
-        env: {
-          ...getEnvForCommand(),
-          TERM: 'xterm-256color',
-          COLORTERM: 'truecolor',
-        } as Record<string, string>,
-      });
-
-      ptyProcess.onData((data) => {
-        output += data;
-      });
-
-      ptyProcess.onExit(({ exitCode }) => {
-        if (hasExited) return;
-        hasExited = true;
-        clearTimeout(timeoutId);
-
-        if (exitCode === 0) {
-          resolve(stripAnsi(output).trim());
-        } else {
-          reject(new Error(`Command exited with code ${exitCode}`));
-        }
-      });
-    } catch (error) {
-      hasExited = true;
-      clearTimeout(timeoutId);
-      reject(error);
-    }
-  });
-}
+import { execInPty } from '../../utils/shell';
 
 function getPluginsDir(): string {
   return path.join(os.homedir(), '.claude', 'plugins');
@@ -287,7 +208,7 @@ export async function removeMarketplace(name: string): Promise<boolean> {
   try {
     const cmd = `claude plugin marketplace remove "${name}"`;
     console.log(`[PluginsManager] Running: ${cmd}`);
-    const stdout = await execInPty(cmd, 30000);
+    const stdout = await execInPty(cmd, { timeout: 30000 });
 
     if (stdout) console.log(`[PluginsManager] ${stdout}`);
 
@@ -454,7 +375,7 @@ export async function installPlugin(pluginName: string, marketplace?: string): P
     const cmd = `claude plugin install "${pluginSpec}"`;
 
     console.log(`[PluginsManager] Running: ${cmd}`);
-    const stdout = await execInPty(cmd, 120000);
+    const stdout = await execInPty(cmd, { timeout: 120000 });
 
     if (stdout) console.log(`[PluginsManager] ${stdout}`);
 
@@ -474,7 +395,7 @@ export async function uninstallPlugin(pluginId: string): Promise<boolean> {
     const cmd = `claude plugin uninstall "${pluginId}"`;
 
     console.log(`[PluginsManager] Running: ${cmd}`);
-    const stdout = await execInPty(cmd, 30000);
+    const stdout = await execInPty(cmd, { timeout: 30000 });
 
     if (stdout) console.log(`[PluginsManager] ${stdout}`);
 

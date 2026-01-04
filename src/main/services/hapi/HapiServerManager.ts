@@ -1,8 +1,9 @@
 import type { ChildProcess } from 'node:child_process';
-import { exec, spawn, spawnSync } from 'node:child_process';
+import { exec, spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { promisify } from 'node:util';
+import { killProcessTree } from '../../utils/processUtils';
 import { execInPty, getEnvForCommand, getShellForCommand } from '../../utils/shell';
 
 const execAsync = promisify(exec);
@@ -264,10 +265,9 @@ class HapiServerManager extends EventEmitter {
 
     return new Promise((resolve) => {
       const proc = this.process!;
-      const pid = proc.pid;
 
       const timeout = setTimeout(() => {
-        this.killProcessTree(pid, 'SIGKILL');
+        killProcessTree(proc);
       }, 5000);
 
       proc.once('exit', () => {
@@ -278,24 +278,8 @@ class HapiServerManager extends EventEmitter {
         resolve(this.status);
       });
 
-      this.killProcessTree(pid, 'SIGTERM');
+      killProcessTree(proc, 'SIGTERM');
     });
-  }
-
-  private killProcessTree(pid: number | undefined, signal: NodeJS.Signals): void {
-    if (!pid) return;
-
-    try {
-      if (process.platform !== 'win32') {
-        // Kill the entire process group on Unix
-        process.kill(-pid, signal);
-      } else {
-        // On Windows, use taskkill synchronously to ensure process is killed
-        spawnSync('taskkill', ['/pid', String(pid), '/t', '/f'], { stdio: 'ignore' });
-      }
-    } catch {
-      // Process may have already exited
-    }
   }
 
   async restart(config: HapiConfig): Promise<HapiStatus> {
@@ -309,7 +293,7 @@ class HapiServerManager extends EventEmitter {
 
   cleanup(): void {
     if (this.process) {
-      this.killProcessTree(this.process.pid, 'SIGKILL');
+      killProcessTree(this.process);
       this.process = null;
     }
   }
