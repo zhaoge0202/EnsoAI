@@ -5,3 +5,4 @@ onlyBuiltDependencies:
   - electron-winstaller
   - esbuild
   - node-pty
+  - '@vscode/ripgrep'
