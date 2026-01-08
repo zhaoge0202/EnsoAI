@@ -6,17 +6,29 @@ import type {
   WorktreeMergeResult,
 } from '@shared/types';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useCallback, useEffect, useState } from 'react';
-import { panelTransition, type Repository, type TabId } from './App/constants';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ALL_GROUP_ID,
+  generateGroupId,
+  panelTransition,
+  type Repository,
+  type RepositoryGroup,
+  type TabId,
+} from './App/constants';
+import {
+  getActiveGroupId,
   getRepositorySettings,
   getStoredBoolean,
+  getStoredGroups,
   getStoredTabMap,
   getStoredTabOrder,
   getStoredWorktreeMap,
   getStoredWorktreeOrderMap,
+  migrateRepositoryGroups,
   pathsEqual,
   STORAGE_KEYS,
+  saveActiveGroupId,
+  saveGroups,
   saveTabOrder,
   saveWorktreeOrderMap,
 } from './App/storage';
@@ -75,6 +87,8 @@ export default function App() {
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
   const [activeWorktree, setActiveWorktree] = useState<GitWorktree | null>(null);
+  const [groups, setGroups] = useState<RepositoryGroup[]>([]);
+  const [activeGroupId, setActiveGroupId] = useState<string>(ALL_GROUP_ID);
 
   // Panel collapsed states - initialize from localStorage
   const [repositoryCollapsed, setRepositoryCollapsed] = useState(() =>
@@ -229,27 +243,36 @@ export default function App() {
   const abortMergeMutation = useWorktreeMergeAbort();
   const continueMergeMutation = useWorktreeMergeContinue();
 
-  // Load saved repositories and selection from localStorage
   useEffect(() => {
+    migrateRepositoryGroups();
+
+    const savedGroups = getStoredGroups();
+    setGroups(savedGroups);
+    setActiveGroupId(getActiveGroupId());
+
+    const validGroupIds = new Set(savedGroups.map((g) => g.id));
+
     const savedRepos = localStorage.getItem(STORAGE_KEYS.REPOSITORIES);
     if (savedRepos) {
       try {
-        const parsed = JSON.parse(savedRepos) as Repository[];
-        // Migration: fix repo names that contain full paths (Windows compatibility fix)
+        let parsed = JSON.parse(savedRepos) as Repository[];
         let needsMigration = false;
-        const migrated = parsed.map((repo) => {
-          // If name contains path separators, it's a full path that needs fixing
+        parsed = parsed.map((repo) => {
           if (repo.name.includes('/') || repo.name.includes('\\')) {
             needsMigration = true;
             const fixedName = repo.path.split(/[\\/]/).pop() || repo.path;
             return { ...repo, name: fixedName };
           }
+          if (repo.groupId && !validGroupIds.has(repo.groupId)) {
+            needsMigration = true;
+            return { ...repo, groupId: undefined };
+          }
           return repo;
         });
         if (needsMigration) {
-          localStorage.setItem(STORAGE_KEYS.REPOSITORIES, JSON.stringify(migrated));
+          localStorage.setItem(STORAGE_KEYS.REPOSITORIES, JSON.stringify(parsed));
         }
-        setRepositories(migrated);
+        setRepositories(parsed);
       } catch {
         // ignore
       }
@@ -280,11 +303,84 @@ export default function App() {
     }
   }, []);
 
-  // Save repositories to localStorage
   const saveRepositories = useCallback((repos: Repository[]) => {
     localStorage.setItem(STORAGE_KEYS.REPOSITORIES, JSON.stringify(repos));
     setRepositories(repos);
   }, []);
+
+  const filteredRepositories = useMemo(() => {
+    if (activeGroupId === ALL_GROUP_ID) {
+      return repositories;
+    }
+    return repositories.filter((r) => r.groupId === activeGroupId);
+  }, [repositories, activeGroupId]);
+
+  const sortedGroups = useMemo(() => {
+    return [...groups].sort((a, b) => a.order - b.order);
+  }, [groups]);
+
+  const handleCreateGroup = useCallback(
+    (name: string, emoji: string) => {
+      const newGroup: RepositoryGroup = {
+        id: generateGroupId(),
+        name: name.trim(),
+        emoji,
+        order: groups.length,
+      };
+      const updated = [...groups, newGroup];
+      setGroups(updated);
+      saveGroups(updated);
+      return newGroup;
+    },
+    [groups]
+  );
+
+  const handleUpdateGroup = useCallback(
+    (groupId: string, name: string, emoji: string) => {
+      const updated = groups.map((g) =>
+        g.id === groupId ? { ...g, name: name.trim(), emoji } : g
+      );
+      setGroups(updated);
+      saveGroups(updated);
+    },
+    [groups]
+  );
+
+  const handleDeleteGroup = useCallback(
+    (groupId: string) => {
+      const updatedGroups = groups
+        .filter((g) => g.id !== groupId)
+        .map((g, i) => ({ ...g, order: i }));
+      setGroups(updatedGroups);
+      saveGroups(updatedGroups);
+
+      const updatedRepos = repositories.map((r) =>
+        r.groupId === groupId ? { ...r, groupId: undefined } : r
+      );
+      saveRepositories(updatedRepos);
+
+      if (activeGroupId === groupId) {
+        setActiveGroupId(ALL_GROUP_ID);
+        saveActiveGroupId(ALL_GROUP_ID);
+      }
+    },
+    [groups, repositories, saveRepositories, activeGroupId]
+  );
+
+  const handleSwitchGroup = useCallback((groupId: string) => {
+    setActiveGroupId(groupId);
+    saveActiveGroupId(groupId);
+  }, []);
+
+  const handleMoveToGroup = useCallback(
+    (repoPath: string, targetGroupId: string | null) => {
+      const updated = repositories.map((r) =>
+        r.path === repoPath ? { ...r, groupId: targetGroupId || undefined } : r
+      );
+      saveRepositories(updated);
+    },
+    [repositories, saveRepositories]
+  );
 
   // Reorder repositories
   const handleReorderRepositories = useCallback(
@@ -756,6 +852,13 @@ export default function App() {
                 onOpenSettings={() => setSettingsOpen(true)}
                 collapsed={false}
                 onCollapse={() => setRepositoryCollapsed(true)}
+                groups={sortedGroups}
+                activeGroupId={activeGroupId}
+                onSwitchGroup={handleSwitchGroup}
+                onCreateGroup={handleCreateGroup}
+                onUpdateGroup={handleUpdateGroup}
+                onDeleteGroup={handleDeleteGroup}
+                onMoveToGroup={handleMoveToGroup}
               />
               {/* Resize handle */}
               <div
@@ -789,6 +892,13 @@ export default function App() {
                   onOpenSettings={() => setSettingsOpen(true)}
                   collapsed={false}
                   onCollapse={() => setRepositoryCollapsed(true)}
+                  groups={sortedGroups}
+                  activeGroupId={activeGroupId}
+                  onSwitchGroup={handleSwitchGroup}
+                  onCreateGroup={handleCreateGroup}
+                  onUpdateGroup={handleUpdateGroup}
+                  onDeleteGroup={handleDeleteGroup}
+                  onMoveToGroup={handleMoveToGroup}
                 />
                 {/* Resize handle */}
                 <div

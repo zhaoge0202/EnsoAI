@@ -1,4 +1,4 @@
-import { DEFAULT_TAB_ORDER, type TabId } from './constants';
+import { ALL_GROUP_ID, DEFAULT_TAB_ORDER, type RepositoryGroup, type TabId } from './constants';
 
 // Storage keys
 export const STORAGE_KEYS = {
@@ -15,6 +15,8 @@ export const STORAGE_KEYS = {
   REPOSITORY_COLLAPSED: 'enso-repository-collapsed',
   WORKTREE_COLLAPSED: 'enso-worktree-collapsed',
   REPOSITORY_SETTINGS: 'enso-repository-settings', // per-repo settings (init script, etc.)
+  REPOSITORY_GROUPS: 'enso-repository-groups',
+  ACTIVE_GROUP: 'enso-active-group',
 } as const;
 
 // Helper to get initial value from localStorage
@@ -180,4 +182,37 @@ export const saveRepositorySettings = (repoPath: string, settings: RepositorySet
   const normalizedPath = normalizePath(repoPath);
   allSettings[normalizedPath] = settings;
   localStorage.setItem(STORAGE_KEYS.REPOSITORY_SETTINGS, JSON.stringify(allSettings));
+};
+
+export const getStoredGroups = (): RepositoryGroup[] => {
+  const saved = localStorage.getItem(STORAGE_KEYS.REPOSITORY_GROUPS);
+  if (saved) {
+    try {
+      return JSON.parse(saved) as RepositoryGroup[];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+export const saveGroups = (groups: RepositoryGroup[]): void => {
+  localStorage.setItem(STORAGE_KEYS.REPOSITORY_GROUPS, JSON.stringify(groups));
+};
+
+export const getActiveGroupId = (): string => {
+  return localStorage.getItem(STORAGE_KEYS.ACTIVE_GROUP) || ALL_GROUP_ID;
+};
+
+export const saveActiveGroupId = (groupId: string): void => {
+  localStorage.setItem(STORAGE_KEYS.ACTIVE_GROUP, groupId);
+};
+
+export const migrateRepositoryGroups = (): void => {
+  if (localStorage.getItem(STORAGE_KEYS.REPOSITORY_GROUPS) === null) {
+    localStorage.setItem(STORAGE_KEYS.REPOSITORY_GROUPS, JSON.stringify([]));
+  }
+  if (localStorage.getItem(STORAGE_KEYS.ACTIVE_GROUP) === null) {
+    localStorage.setItem(STORAGE_KEYS.ACTIVE_GROUP, ALL_GROUP_ID);
+  }
 };
