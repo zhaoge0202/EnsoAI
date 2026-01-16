@@ -11,13 +11,14 @@ import {
   registerIpcHandlers,
 } from './ipc';
 import { initClaudeProviderWatcher } from './ipc/claudeProvider';
+import { registerWindowHandlers } from './ipc/window';
 import { registerClaudeBridgeIpcHandlers } from './services/claude/ClaudeIdeBridge';
 import { unwatchClaudeSettings } from './services/claude/ClaudeProviderManager';
 import { checkGitInstalled } from './services/git/checkGit';
 import { setCurrentLocale } from './services/i18n';
 import { buildAppMenu } from './services/MenuBuilder';
+import { getEnhancedPath } from './services/terminal/PtyManager';
 import { createMainWindow } from './windows/MainWindow';
-import { registerWindowHandlers } from './ipc/window';
 
 let mainWindow: BrowserWindow | null = null;
 let pendingOpenPath: string | null = null;
@@ -166,6 +167,10 @@ async function initAutoUpdater(window: BrowserWindow): Promise<void> {
 }
 
 async function init(): Promise<void> {
+  // Enhance PATH for child processes (AI SDK, git commands, etc.)
+  // GUI apps don't inherit shell environment, so we need to add common paths
+  process.env.PATH = getEnhancedPath();
+
   // Check Git installation
   const gitInstalled = await checkGitInstalled();
   if (!gitInstalled) {
