@@ -6,6 +6,16 @@ import { type Locale, normalizeLocale } from '@shared/i18n';
 import { IPC_CHANNELS } from '@shared/types';
 import { app, BrowserWindow, ipcMain, Menu, net, protocol } from 'electron';
 
+// Fix environment for packaged app (macOS GUI apps don't inherit shell env)
+if (process.platform === 'darwin') {
+  const { shellEnvSync } = await import('shell-env');
+  try {
+    Object.assign(process.env, shellEnvSync());
+  } catch {
+    // Ignore errors - will use default env
+  }
+}
+
 import {
   autoStartHapi,
   cleanupAllResources,

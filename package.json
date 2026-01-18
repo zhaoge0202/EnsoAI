@@ -69,6 +69,7 @@
     "rehype-raw": "^7.0.0",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
+    "shell-env": "^4.0.2",
     "shiki": "^3.20.0",
     "simple-git": "^3.30.0",
     "tailwind-merge": "^3.4.0",
