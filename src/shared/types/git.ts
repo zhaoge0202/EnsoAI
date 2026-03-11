@@ -42,6 +42,15 @@ export interface GitWorktree {
   prunable: boolean;
 }
 
+// Git Blame types
+export interface GitBlameLineInfo {
+  hash: string;
+  author: string;
+  date: string; // ISO date string
+  message: string;
+  lineNumber: number;
+}
+
 // Source Control types
 // M=Modified, A=Added(staged), D=Deleted, R=Renamed, C=Copied, U=Untracked, X=Conflict
 export type FileChangeStatus = 'M' | 'A' | 'D' | 'R' | 'C' | 'U' | 'X';

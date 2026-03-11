@@ -252,6 +252,8 @@ export const defaultEditorSettings: EditorSettings = {
   // Auto Save
   autoSave: 'off',
   autoSaveDelay: 1000,
+  // Git
+  gitBlameEnabled: false,
 };
 
 // Default keybindings

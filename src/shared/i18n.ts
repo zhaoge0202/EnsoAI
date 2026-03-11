@@ -527,8 +527,11 @@ export const zhTranslations: Record<string, string> = {
   '{{command}} completed': '{{command}} 已完成',
   '{{count}} lines': '{{count}} 行',
   '{{count}} seconds': '{{count}} 秒',
+  '{{count}} minutes ago': '{{count}} 分钟前',
   '{{count}} hours ago': '{{count}} 小时前',
   '{{count}} days ago': '{{count}} 天前',
+  '{{count}} months ago': '{{count}} 个月前',
+  '{{count}} years ago': '{{count}} 年前',
   '{{count}} staged changes': '{{count}} 个已暂存的更改',
   '{{count}} repositories in this group will be moved to ungrouped.':
     '该分组中的 {{count}} 个仓库将被移至未分组。',

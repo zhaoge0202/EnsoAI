@@ -159,6 +159,8 @@ export interface EditorSettings {
   // Auto Save
   autoSave: EditorAutoSave;
   autoSaveDelay: number;
+  // Git
+  gitBlameEnabled: boolean;
 }
 
 // Status Line display field settings

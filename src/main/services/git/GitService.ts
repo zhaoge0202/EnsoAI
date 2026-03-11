@@ -10,6 +10,7 @@ import type {
   FileChangesResult,
   FileDiff,
   GhCliStatus,
+  GitBlameLineInfo,
   GitBranch,
   GitLogEntry,
   GitStatus,
@@ -1464,5 +1465,116 @@ export class GitService {
 
     // Execute clone with progress flag
     await git.clone(remoteUrl, cloneTarget, ['--progress']);
+  }
+
+  /**
+   * Get blame info for all lines of a file using `git blame --porcelain`.
+   */
+  async blame(filePath: string): Promise<GitBlameLineInfo[]> {
+    return new Promise((resolve, reject) => {
+      const proc = spawnGit(this.workdir, ['blame', '--porcelain', '--', filePath]);
+
+      let stdout = '';
+      let stderr = '';
+
+      proc.stdout.on('data', (data: Buffer) => {
+        stdout += data.toString('utf-8');
+      });
+
+      proc.stderr.on('data', (data: Buffer) => {
+        stderr += data.toString('utf-8');
+      });
+
+      proc.on('close', (code) => {
+        if (code !== 0) {
+          reject(new Error(`git blame failed: ${stderr.trim()}`));
+          return;
+        }
+
+        try {
+          const result = this.parsePorcelainBlame(stdout);
+          resolve(result);
+        } catch (e) {
+          reject(e);
+        }
+      });
+
+      proc.on('error', reject);
+    });
+  }
+
+  /**
+   * Parse `git blame --porcelain` output into structured data.
+   *
+   * Porcelain format groups:
+   *   <hash> <orig-line> <final-line> [<num-lines>]
+   *   author <name>
+   *   author-time <timestamp>
+   *   summary <message>
+   *   ...
+   *   \t<content-line>
+   */
+  private parsePorcelainBlame(output: string): GitBlameLineInfo[] {
+    const lines = output.split('\n');
+    const results: GitBlameLineInfo[] = [];
+
+    // Cache commit metadata keyed by hash
+    const commitCache = new Map<string, { author: string; date: string; message: string }>();
+
+    let i = 0;
+    while (i < lines.length) {
+      const headerMatch = lines[i].match(/^([0-9a-f]{40})\s+(\d+)\s+(\d+)(?:\s+(\d+))?$/);
+      if (!headerMatch) {
+        i++;
+        continue;
+      }
+
+      const hash = headerMatch[1];
+      const lineNumber = parseInt(headerMatch[3], 10);
+
+      i++;
+
+      // Parse header fields until we hit the content line (starts with \t)
+      let author = '';
+      let authorTime = 0;
+      let summary = '';
+
+      while (i < lines.length && !lines[i].startsWith('\t')) {
+        const line = lines[i];
+        if (line.startsWith('author ')) {
+          author = line.slice(7);
+        } else if (line.startsWith('author-time ')) {
+          authorTime = parseInt(line.slice(12), 10);
+        } else if (line.startsWith('summary ')) {
+          summary = line.slice(8);
+        }
+        i++;
+      }
+
+      // Skip content line
+      if (i < lines.length && lines[i].startsWith('\t')) {
+        i++;
+      }
+
+      // Use cached metadata if available, otherwise store it
+      if (!commitCache.has(hash)) {
+        commitCache.set(hash, {
+          author,
+          date: authorTime ? new Date(authorTime * 1000).toISOString() : '',
+          message: summary,
+        });
+      }
+
+      const cached = commitCache.get(hash)!;
+      results.push({
+        hash,
+        author: cached.author,
+        date: cached.date,
+        message: cached.message,
+        lineNumber,
+      });
+    }
+
+    return results;
   }
 }

@@ -123,6 +123,11 @@ const electronAPI = {
       ),
     getDiffStats: (workdir: string): Promise<{ insertions: number; deletions: number }> =>
       ipcRenderer.invoke(IPC_CHANNELS.GIT_DIFF_STATS, workdir),
+    blame: (
+      workdir: string,
+      filePath: string
+    ): Promise<import('@shared/types').GitBlameLineInfo[]> =>
+      ipcRenderer.invoke(IPC_CHANNELS.GIT_BLAME, workdir, filePath),
     generateCommitMessage: (
       workdir: string,
       options: {

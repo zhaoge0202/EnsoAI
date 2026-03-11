@@ -43,6 +43,7 @@ import { ImagePreview } from './ImagePreview';
 import { MarkdownPreview } from './MarkdownPreview';
 import { CUSTOM_THEME_NAME, defineMonacoTheme } from './monacoTheme';
 import { PdfPreview } from './PdfPreview';
+import { useEditorBlame } from './useEditorBlame';
 // Import for side effects (Monaco setup)
 import './monacoSetup';
 
@@ -237,6 +238,16 @@ export const EditorArea = forwardRef<EditorAreaRef, EditorAreaProps>(function Ed
     filePath: activeTabPath,
     rootPath: rootPath ?? null,
     enabled: editorReady && !!sessionId,
+  });
+
+  // Inline git blame
+  useEditorBlame({
+    editor: editorInstance,
+    monacoInstance: monacoInstance,
+    filePath: activeTabPath,
+    rootPath,
+    enabled: editorReady && editorSettings.gitBlameEnabled,
+    t,
   });
 
   // Calculate breadcrumb segments from active file path
