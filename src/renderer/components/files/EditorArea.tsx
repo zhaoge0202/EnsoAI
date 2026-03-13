@@ -43,6 +43,7 @@ import { ImagePreview } from './ImagePreview';
 import { MarkdownPreview } from './MarkdownPreview';
 import { CUSTOM_THEME_NAME, defineMonacoTheme } from './monacoTheme';
 import { PdfPreview } from './PdfPreview';
+import { useEditorBlame } from './useEditorBlame';
 // Import for side effects (Monaco setup)
 import './monacoSetup';
 
@@ -134,7 +135,7 @@ export const EditorArea = forwardRef<EditorAreaRef, EditorAreaProps>(function Ed
   const focus = useTerminalWriteStore((state) => state.focus);
 
   // Helper function to format line reference from selection
-  const formatLineRef = useCallback((selection: monaco.ISelection): string => {
+  const formatLineRef = useCallback((selection: monaco.Selection): string => {
     const endLine =
       selection.endColumn === 1 ? selection.endLineNumber - 1 : selection.endLineNumber;
     return selection.startLineNumber === endLine
@@ -238,6 +239,28 @@ export const EditorArea = forwardRef<EditorAreaRef, EditorAreaProps>(function Ed
     rootPath: rootPath ?? null,
     enabled: editorReady && !!sessionId,
   });
+
+  // Inline git blame
+  const { refreshBlame } = useEditorBlame({
+    editor: editorInstance,
+    monacoInstance: monacoInstance,
+    filePath: activeTabPath,
+    rootPath,
+    enabled: editorReady && editorSettings.gitBlameEnabled,
+    t,
+  });
+
+  // Wrap onSave to refresh blame after save
+  const handleSaveWithBlameRefresh = useCallback(
+    (path: string) => {
+      onSave(path);
+      // Refresh blame after file is saved
+      if (path === activeTabPath) {
+        refreshBlame();
+      }
+    },
+    [onSave, activeTabPath, refreshBlame]
+  );
 
   // Calculate breadcrumb segments from active file path
   const breadcrumbSegments = useMemo(() => {
@@ -478,6 +501,13 @@ export const EditorArea = forwardRef<EditorAreaRef, EditorAreaProps>(function Ed
         if (activeTabPath) {
           onSave(activeTabPath);
         }
+      });
+
+      // Add Ctrl/Cmd+O shortcut: show file structure (go to symbol in file)
+      // Uses editor.action.quickOutline — the correct standalone Monaco action ID
+      // KeyMod.CtrlCmd maps to Cmd on macOS and Ctrl on Windows/Linux
+      editor.addCommand(m.KeyMod.CtrlCmd | m.KeyCode.KeyO, () => {
+        editor.getAction('editor.action.quickOutline')?.run();
       });
 
       editor.addCommand(m.KeyMod.CtrlCmd | m.KeyMod.Shift | m.KeyCode.KeyF, () => {

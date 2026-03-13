@@ -3,6 +3,7 @@ import type {
   AIProvider,
   BuiltinAgentId,
   CustomAgent,
+  GitHostMapping,
   McpServer,
   PromptPreset,
   ProxySettings,
@@ -16,6 +17,8 @@ export type Theme = 'light' | 'dark' | 'system' | 'sync-terminal';
 export type LayoutMode = 'columns' | 'tree';
 
 export type FileTreeDisplayMode = 'legacy' | 'current';
+
+export type RepositoryListDisplayMode = 'tabs' | 'list';
 
 export type SettingsDisplayMode = 'tab' | 'draggable-modal';
 
@@ -159,6 +162,8 @@ export interface EditorSettings {
   // Auto Save
   autoSave: EditorAutoSave;
   autoSaveDelay: number;
+  // Git
+  gitBlameEnabled: boolean;
 }
 
 // Status Line display field settings
@@ -203,6 +208,16 @@ export interface CommitMessageGeneratorSettings {
   model: string; // Dynamic based on provider
   reasoningEffort?: ReasoningEffort; // For Codex CLI
   prompt: string; // Custom prompt template
+}
+
+// Todo AI polish settings
+export interface TodoPolishSettings {
+  enabled: boolean;
+  provider: AIProvider;
+  model: string; // Dynamic based on provider
+  reasoningEffort?: ReasoningEffort; // For Codex CLI
+  timeout: number; // in seconds
+  prompt: string; // Custom prompt template (with {text} placeholder)
 }
 
 // Branch name generator settings
@@ -265,12 +280,23 @@ export interface QuickTerminalSettings {
 export type BackgroundSourceType = 'file' | 'folder' | 'url';
 export type BackgroundSizeMode = 'cover' | 'contain' | 'repeat' | 'center';
 
+// Git Clone settings
+export interface GitCloneSettings {
+  /** Base directory for cloned repositories */
+  baseDir: string;
+  /** Host-to-directory mappings */
+  hostMappings: GitHostMapping[];
+  /** Use organized structure (baseDir/host/owner/repo) or flat (baseDir/repo) */
+  useOrganizedStructure: boolean;
+}
+
 // Main settings state interface
 export interface SettingsState {
   // UI Settings
   theme: Theme;
   layoutMode: LayoutMode;
   fileTreeDisplayMode: FileTreeDisplayMode;
+  repositoryListDisplayMode: RepositoryListDisplayMode;
   language: Locale;
   fontSize: number;
   fontFamily: string;
@@ -313,6 +339,7 @@ export interface SettingsState {
   commitMessageGenerator: CommitMessageGeneratorSettings;
   codeReview: CodeReviewSettings;
   branchNameGenerator: BranchNameGeneratorSettings;
+  todoPolish: TodoPolishSettings;
 
   // App Settings
   autoUpdateEnabled: boolean;
@@ -320,6 +347,9 @@ export interface SettingsState {
   defaultWorktreePath: string; // Default path for creating worktrees
   proxySettings: ProxySettings;
   autoCreateSessionOnActivate: boolean; // Auto-create agent/terminal session when worktree becomes active
+
+  // Git Clone Settings
+  gitClone: GitCloneSettings;
 
   // Beta features
   todoEnabled: boolean; // Enable Todo kanban board (Beta)
@@ -374,6 +404,7 @@ export interface SettingsState {
   setTheme: (theme: Theme) => void;
   setLayoutMode: (mode: LayoutMode) => void;
   setFileTreeDisplayMode: (mode: FileTreeDisplayMode) => void;
+  setRepositoryListDisplayMode: (mode: RepositoryListDisplayMode) => void;
   setLanguage: (language: Locale) => void;
   setFontSize: (size: number) => void;
   setFontFamily: (family: string) => void;
@@ -433,6 +464,7 @@ export interface SettingsState {
   setCommitMessageGenerator: (settings: Partial<CommitMessageGeneratorSettings>) => void;
   setCodeReview: (settings: Partial<CodeReviewSettings>) => void;
   setBranchNameGenerator: (settings: Partial<BranchNameGeneratorSettings>) => void;
+  setTodoPolish: (settings: Partial<TodoPolishSettings>) => void;
 
   // Setters - App
   setAutoUpdateEnabled: (enabled: boolean) => void;
@@ -440,6 +472,15 @@ export interface SettingsState {
   setDefaultWorktreePath: (path: string) => void;
   setProxySettings: (settings: Partial<ProxySettings>) => void;
   setAutoCreateSessionOnActivate: (enabled: boolean) => void;
+
+  // Setters - Git Clone
+  setGitClone: (settings: Partial<GitCloneSettings>) => void;
+  addHostMapping: (mapping: import('@shared/types').GitHostMapping) => void;
+  removeHostMapping: (pattern: string) => void;
+  updateHostMapping: (
+    oldPattern: string,
+    updates: Partial<import('@shared/types').GitHostMapping>
+  ) => void;
 
   // Setters - Beta features
   setTodoEnabled: (enabled: boolean) => void;

@@ -331,7 +331,7 @@ export const zhTranslations: Record<string, string> = {
   'Remove repository confirm': '移除仓库',
   'Remove repository description': '此操作只会从应用中移除，不会删除本地文件。',
   'Repository Settings': '仓库设置',
-  Repositories: '存储库',
+  Repositories: '仓库列表',
   'Auto-initialize new worktrees': '自动初始化新 Worktree',
   'Automatically run init script when creating new worktrees':
     '创建新 Worktree 时自动运行初始化脚本',
@@ -527,8 +527,11 @@ export const zhTranslations: Record<string, string> = {
   '{{command}} completed': '{{command}} 已完成',
   '{{count}} lines': '{{count}} 行',
   '{{count}} seconds': '{{count}} 秒',
+  '{{count}} minutes ago': '{{count}} 分钟前',
   '{{count}} hours ago': '{{count}} 小时前',
   '{{count}} days ago': '{{count}} 天前',
+  '{{count}} months ago': '{{count}} 个月前',
+  '{{count}} years ago': '{{count}} 年前',
   '{{count}} staged changes': '{{count}} 个已暂存的更改',
   '{{count}} repositories in this group will be moved to ungrouped.':
     '该分组中的 {{count}} 个仓库将被移至未分组。',
@@ -615,6 +618,8 @@ export const zhTranslations: Record<string, string> = {
   'Sync with remote': '同步远程',
   '(commit history)': '(提交历史)',
   'Open in editor': '在编辑器中打开',
+  'Collapse unchanged code': '折叠未修改代码',
+  'Show unchanged code': '显示未修改代码',
   'Discard {{count}} changes': '撤销 {{count}} 处更改',
   'Delete {{count}} files': '删除 {{count}} 个文件',
   'Are you sure you want to discard changes to {{count}} files? This cannot be undone.':
@@ -633,6 +638,13 @@ export const zhTranslations: Record<string, string> = {
   'Tree + editor in one panel': '文件树与编辑器在同一面板',
   'Split sidebar': '分栏模式',
   'Dedicated file sidebar + editor': '独立文件侧栏 + 编辑器',
+  'Repository List Display': '仓库列表展示',
+  'Choose how repositories and submodules are displayed in source control':
+    '选择版本管理中仓库和子模块的展示方式',
+  List: '列表',
+  'VSCode-style collapsible list': 'VSCode 风格可折叠列表',
+  Tabs: '标签页',
+  'Horizontal tabs for quick switching': '水平标签页，快速切换',
   'Integrated tree + editor (original)': '树与编辑器一体（原有）',
   Original: '原有',
   'Split sidebar + editor (current)': '文件侧栏与编辑器分离（当前）',
@@ -710,6 +722,8 @@ export const zhTranslations: Record<string, string> = {
   'Make links clickable': '使链接可点击',
   'Smooth scrolling': '平滑滚动',
   'Enable smooth scrolling': '启用平滑滚动',
+  'Git Blame': 'Git Blame',
+  'Show inline git blame info at cursor line': '在光标行显示内联 Git Blame 信息',
   // Cursor section
   Cursor: '光标',
   'Cursor appearance settings': '光标外观设置',
@@ -1313,6 +1327,45 @@ export const zhTranslations: Record<string, string> = {
   'Launch Agent': '启动 Agent',
   'No tasks yet': '暂无任务',
   'Create your first task to get started': '创建第一个任务开始使用',
+  // Git Clone Settings
+  'Git Clone': 'Git 克隆',
+  'Base directory': '基础目录',
+  'Organized structure': '组织结构',
+  'Repository domains': '仓库域名',
+  'Built-in mappings': '内置映射',
+  'Settings for cloning remote Git repositories': '远程 Git 仓库克隆设置',
+  'Base directory for cloned repositories. Leave empty to use ~/ensoai/repos':
+    '克隆仓库的基础目录。留空则使用 ~/ensoai/repos',
+  'Clone to organized structure (baseDir/host/owner/repo) or flat (baseDir/repo)':
+    '克隆到组织结构（baseDir/host/owner/repo）或扁平结构（baseDir/repo）',
+  'Host-to-directory mappings for organizing cloned repositories':
+    '用于组织克隆仓库的域名到目录映射',
+  'No mappings configured': '未配置域名映射',
+  'Domain pattern': '域名格式',
+  'Directory name': '目录名称',
+  'Git host domain (e.g., gitlab.example.com or *.example.com)':
+    'Git 仓库域名（例如：gitlab.example.com 或 *.example.com）',
+  'Directory name for this host (e.g., gitlab, company-gitlab)':
+    '此域名的目录名（例如：gitlab、company-gitlab）',
+  'Pattern is required': '域名模式不能为空',
+  'Directory name is required': '目录名称不能为空',
+  'Pattern already exists': '域名模式已存在',
+  'Map a Git repository domain to a directory name for organizing cloned repositories':
+    '将 Git 仓库域名映射到目录名，以便组织克隆的仓库',
+  'AI Polish': 'AI 润色',
+  'Polish with AI': '使用 AI 润色',
+  'Failed to polish task': 'AI 润色失败',
+  'Todo AI Polish': '待办 AI 润色',
+  'Use AI to generate a title and description from raw requirement text':
+    '通过 AI 将原始需求文本生成简洁标题和 Agent 友好的内容',
+  'Enable AI Polish': '启用 AI 润色',
+  'Show AI polish button when creating or editing tasks': '新建或编辑任务时显示 AI 润色按钮',
+  'Model for polishing task content': '用于润色任务内容的模型',
+  'Customize the AI prompt for polishing tasks': '自定义任务润色的 AI 提示词',
+  'This will restore the default AI prompt for todo polish. Your custom prompt will be lost.':
+    '这将恢复待办润色的默认 AI 提示词，自定义提示词将会丢失。',
+  'Enter a prompt template.\nAvailable variables:\n• {text} - Raw requirement text':
+    '输入提示词模板。\n可用变量：\n• {text} - 原始需求文本',
 };
 
 export function normalizeLocale(input?: string): Locale {

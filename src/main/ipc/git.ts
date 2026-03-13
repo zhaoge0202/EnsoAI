@@ -387,6 +387,12 @@ export function registerGitHandlers(): void {
     }
   );
 
+  // Git Blame
+  ipcMain.handle(IPC_CHANNELS.GIT_BLAME, async (_, workdir: string, filePath: string) => {
+    const git = getGitService(workdir);
+    return git.blame(filePath);
+  });
+
   // Git Auto Fetch
   ipcMain.handle(IPC_CHANNELS.GIT_AUTO_FETCH_SET_ENABLED, async (_, enabled: boolean) => {
     gitAutoFetchService.setEnabled(enabled);
