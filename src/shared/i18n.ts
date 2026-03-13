@@ -331,7 +331,7 @@ export const zhTranslations: Record<string, string> = {
   'Remove repository confirm': '移除仓库',
   'Remove repository description': '此操作只会从应用中移除，不会删除本地文件。',
   'Repository Settings': '仓库设置',
-  Repositories: '存储库',
+  Repositories: '仓库列表',
   'Auto-initialize new worktrees': '自动初始化新 Worktree',
   'Automatically run init script when creating new worktrees':
     '创建新 Worktree 时自动运行初始化脚本',
@@ -638,6 +638,13 @@ export const zhTranslations: Record<string, string> = {
   'Tree + editor in one panel': '文件树与编辑器在同一面板',
   'Split sidebar': '分栏模式',
   'Dedicated file sidebar + editor': '独立文件侧栏 + 编辑器',
+  'Repository List Display': '仓库列表展示',
+  'Choose how repositories and submodules are displayed in source control':
+    '选择版本管理中仓库和子模块的展示方式',
+  List: '列表',
+  'VSCode-style collapsible list': 'VSCode 风格可折叠列表',
+  Tabs: '标签页',
+  'Horizontal tabs for quick switching': '水平标签页，快速切换',
   'Integrated tree + editor (original)': '树与编辑器一体（原有）',
   Original: '原有',
   'Split sidebar + editor (current)': '文件侧栏与编辑器分离（当前）',
@@ -1339,6 +1346,20 @@ export const zhTranslations: Record<string, string> = {
   'Pattern already exists': '域名模式已存在',
   'Map a Git repository domain to a directory name for organizing cloned repositories':
     '将 Git 仓库域名映射到目录名，以便组织克隆的仓库',
+  'AI Polish': 'AI 润色',
+  'Polish with AI': '使用 AI 润色',
+  'Failed to polish task': 'AI 润色失败',
+  'Todo AI Polish': '待办 AI 润色',
+  'Use AI to generate a title and description from raw requirement text':
+    '通过 AI 将原始需求文本生成简洁标题和 Agent 友好的内容',
+  'Enable AI Polish': '启用 AI 润色',
+  'Show AI polish button when creating or editing tasks': '新建或编辑任务时显示 AI 润色按钮',
+  'Model for polishing task content': '用于润色任务内容的模型',
+  'Customize the AI prompt for polishing tasks': '自定义任务润色的 AI 提示词',
+  'This will restore the default AI prompt for todo polish. Your custom prompt will be lost.':
+    '这将恢复待办润色的默认 AI 提示词，自定义提示词将会丢失。',
+  'Enter a prompt template.\nAvailable variables:\n• {text} - Raw requirement text':
+    '输入提示词模板。\n可用变量：\n• {text} - 原始需求文本',
 };
 
 export function normalizeLocale(input?: string): Locale {

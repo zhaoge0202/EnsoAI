@@ -18,6 +18,8 @@ export type LayoutMode = 'columns' | 'tree';
 
 export type FileTreeDisplayMode = 'legacy' | 'current';
 
+export type RepositoryListDisplayMode = 'tabs' | 'list';
+
 export type SettingsDisplayMode = 'tab' | 'draggable-modal';
 
 // Terminal types
@@ -208,6 +210,16 @@ export interface CommitMessageGeneratorSettings {
   prompt: string; // Custom prompt template
 }
 
+// Todo AI polish settings
+export interface TodoPolishSettings {
+  enabled: boolean;
+  provider: AIProvider;
+  model: string; // Dynamic based on provider
+  reasoningEffort?: ReasoningEffort; // For Codex CLI
+  timeout: number; // in seconds
+  prompt: string; // Custom prompt template (with {text} placeholder)
+}
+
 // Branch name generator settings
 export interface BranchNameGeneratorSettings {
   enabled: boolean;
@@ -284,6 +296,7 @@ export interface SettingsState {
   theme: Theme;
   layoutMode: LayoutMode;
   fileTreeDisplayMode: FileTreeDisplayMode;
+  repositoryListDisplayMode: RepositoryListDisplayMode;
   language: Locale;
   fontSize: number;
   fontFamily: string;
@@ -326,6 +339,7 @@ export interface SettingsState {
   commitMessageGenerator: CommitMessageGeneratorSettings;
   codeReview: CodeReviewSettings;
   branchNameGenerator: BranchNameGeneratorSettings;
+  todoPolish: TodoPolishSettings;
 
   // App Settings
   autoUpdateEnabled: boolean;
@@ -388,6 +402,7 @@ export interface SettingsState {
   setTheme: (theme: Theme) => void;
   setLayoutMode: (mode: LayoutMode) => void;
   setFileTreeDisplayMode: (mode: FileTreeDisplayMode) => void;
+  setRepositoryListDisplayMode: (mode: RepositoryListDisplayMode) => void;
   setLanguage: (language: Locale) => void;
   setFontSize: (size: number) => void;
   setFontFamily: (family: string) => void;
@@ -447,6 +462,7 @@ export interface SettingsState {
   setCommitMessageGenerator: (settings: Partial<CommitMessageGeneratorSettings>) => void;
   setCodeReview: (settings: Partial<CodeReviewSettings>) => void;
   setBranchNameGenerator: (settings: Partial<BranchNameGeneratorSettings>) => void;
+  setTodoPolish: (settings: Partial<TodoPolishSettings>) => void;
 
   // Setters - App
   setAutoUpdateEnabled: (enabled: boolean) => void;

@@ -135,7 +135,7 @@ export const EditorArea = forwardRef<EditorAreaRef, EditorAreaProps>(function Ed
   const focus = useTerminalWriteStore((state) => state.focus);
 
   // Helper function to format line reference from selection
-  const formatLineRef = useCallback((selection: monaco.ISelection): string => {
+  const formatLineRef = useCallback((selection: monaco.Selection): string => {
     const endLine =
       selection.endColumn === 1 ? selection.endLineNumber - 1 : selection.endLineNumber;
     return selection.startLineNumber === endLine
@@ -501,6 +501,13 @@ export const EditorArea = forwardRef<EditorAreaRef, EditorAreaProps>(function Ed
         if (activeTabPath) {
           onSave(activeTabPath);
         }
+      });
+
+      // Add Ctrl/Cmd+O shortcut: show file structure (go to symbol in file)
+      // Uses editor.action.quickOutline — the correct standalone Monaco action ID
+      // KeyMod.CtrlCmd maps to Cmd on macOS and Ctrl on Windows/Linux
+      editor.addCommand(m.KeyMod.CtrlCmd | m.KeyCode.KeyO, () => {
+        editor.getAction('editor.action.quickOutline')?.run();
       });
 
       editor.addCommand(m.KeyMod.CtrlCmd | m.KeyMod.Shift | m.KeyCode.KeyF, () => {

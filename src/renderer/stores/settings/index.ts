@@ -24,6 +24,7 @@ import {
   defaultQuickTerminalSettings,
   defaultSearchKeybindings,
   defaultSourceControlKeybindings,
+  defaultTodoPolishSettings,
   defaultWorkspaceKeybindings,
   defaultXtermKeybindings,
   getDefaultLocale,
@@ -99,6 +100,7 @@ function getInitialState() {
     theme: 'system' as Theme,
     layoutMode: 'tree' as const,
     fileTreeDisplayMode: 'legacy' as const,
+    repositoryListDisplayMode: 'list' as const,
     language: getDefaultLocale(),
     fontSize: 14,
     fontFamily: 'Inter',
@@ -141,6 +143,7 @@ function getInitialState() {
     commitMessageGenerator: defaultCommitMessageGeneratorSettings,
     codeReview: defaultCodeReviewSettings,
     branchNameGenerator: defaultBranchNameGeneratorSettings,
+    todoPolish: defaultTodoPolishSettings,
 
     // App Settings
     autoUpdateEnabled: true,
@@ -221,6 +224,9 @@ export const useSettingsStore = create<SettingsState>()(
       setLayoutMode: (layoutMode) => set({ layoutMode }),
 
       setFileTreeDisplayMode: (fileTreeDisplayMode) => set({ fileTreeDisplayMode }),
+
+      setRepositoryListDisplayMode: (repositoryListDisplayMode) =>
+        set({ repositoryListDisplayMode }),
 
       setLanguage: (language) => {
         document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
@@ -444,6 +450,11 @@ export const useSettingsStore = create<SettingsState>()(
       setBranchNameGenerator: (settings) =>
         set((state) => ({
           branchNameGenerator: { ...state.branchNameGenerator, ...settings },
+        })),
+
+      setTodoPolish: (settings) =>
+        set((state) => ({
+          todoPolish: { ...state.todoPolish, ...settings },
         })),
 
       // App Setters
